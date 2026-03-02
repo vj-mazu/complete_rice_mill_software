@@ -358,93 +358,92 @@ const AdminSampleBook: React.FC = () => {
                                         </div>
                                         <div style={{ display: 'grid', gridTemplateColumns: 'repeat(4, 1fr)', gap: '8px', marginBottom: '8px' }}>
                                             <DetailItem label="Oil" value={fmt(qp.oil)} />
-                                            <div style={{ display: 'grid', gridTemplateColumns: 'repeat(4, 1fr)', gap: '8px', marginBottom: '8px' }}>
-                                                <DetailItem label="SK" value={fmt(qp.sk)} />
-                                                <DetailItem label="WB (R)" value={fmt(qp.wbR)} />
-                                                <DetailItem label="WB (BK)" value={fmt(qp.wbBk)} />
-                                                <DetailItem label="WB (T)" value={fmt(qp.wbT)} />
-                                            </div>
-                                            <div style={{ display: 'grid', gridTemplateColumns: 'repeat(4, 1fr)', gap: '8px' }}>
-                                                <DetailItem label="Paddy WB" value={fmt(qp.paddyWb)} />
-                                            </div>
+                                            <DetailItem label="SK" value={fmt(qp.sk)} />
+                                            <DetailItem label="WB (R)" value={fmt(qp.wbR)} />
+                                            <DetailItem label="WB (BK)" value={fmt(qp.wbBk)} />
                                         </div>
-                                        );
+                                        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(4, 1fr)', gap: '8px' }}>
+                                            <DetailItem label="WB (T)" value={fmt(qp.wbT)} />
+                                            <DetailItem label="Paddy WB" value={fmt(qp.paddyWb)} />
+                                        </div>
+                                    </div>
+                                );
                             })() : (
-                                        <p style={{ color: '#999', fontSize: '13px', fontStyle: 'italic' }}>Quality parameters not added yet</p>
+                                <p style={{ color: '#999', fontSize: '13px', fontStyle: 'italic' }}>Quality parameters not added yet</p>
                             )}
 
-                                        {/* Full mode: Cooking, Final Rate, Workflow */}
-                                        {detailMode === 'full' && (
-                                            <>
-                                                {/* Cooking Report */}
-                                                <div style={{ marginTop: '16px' }}>
-                                                    <h4 style={{ margin: '0 0 10px', fontSize: '13px', color: '#e65100', borderBottom: '2px solid #e65100', paddingBottom: '6px' }}>🍚 Cooking Report</h4>
-                                                    {selectedEntry.cookingReport ? (
-                                                        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: '8px' }}>
-                                                            <DetailItem label="Status" value={selectedEntry.cookingReport.status === 'MEDIUM' ? 'PASS' : (selectedEntry.cookingReport.status || '-')} />
-                                                            <DetailItem label="Cooking Result" value={selectedEntry.cookingReport.cookingResult || '-'} />
-                                                            <DetailItem label="Recheck Count" value={selectedEntry.cookingReport.recheckCount ? String(selectedEntry.cookingReport.recheckCount) : '-'} />
-                                                        </div>
-                                                    ) : (
-                                                        <p style={{ color: '#999', fontSize: '12px', fontStyle: 'italic' }}>Not added yet</p>
-                                                    )}
-                                                </div>
-
-                                                {/* Final Rate */}
-                                                <div style={{ marginTop: '16px' }}>
-                                                    <h4 style={{ margin: '0 0 10px', fontSize: '13px', color: '#0d47a1', borderBottom: '2px solid #0d47a1', paddingBottom: '6px' }}>💰 Final Rate</h4>
-                                                    {selectedEntry.offering ? (
-                                                        <div>
-                                                            <div style={{ background: '#e3f2fd', padding: '8px 12px', borderRadius: '6px', marginBottom: '6px' }}>
-                                                                <span style={{ fontSize: '11px', color: '#666', fontWeight: '600' }}>RATE: </span>
-                                                                <span style={{ fontSize: '15px', fontWeight: '800', color: '#1565c0' }}>
-                                                                    {selectedEntry.offering.finalPrice ? `₹${selectedEntry.offering.finalPrice}` : selectedEntry.offering.finalBaseRate ? `₹${selectedEntry.offering.finalBaseRate}` : selectedEntry.offering.offerBaseRateValue ? `₹${selectedEntry.offering.offerBaseRateValue}` : 'Not set'}
-                                                                </span>
-                                                                {selectedEntry.offering.baseRateType && (
-                                                                    <span style={{ fontSize: '11px', color: '#555', marginLeft: '6px' }}>
-                                                                        {selectedEntry.offering.baseRateType.replace(/_/g, '/')} | {selectedEntry.offering.baseRateUnit === 'per_quintal' ? 'Per Quintal' : selectedEntry.offering.baseRateUnit === 'per_ton' ? 'Per Ton' : 'Per Bag'}
-                                                                    </span>
-                                                                )}
-                                                            </div>
-                                                            <div style={{ display: 'grid', gridTemplateColumns: 'repeat(4, 1fr)', gap: '6px' }}>
-                                                                {(selectedEntry.offering.finalSute || selectedEntry.offering.sute) && (
-                                                                    <DetailItem label="Sute" value={`${selectedEntry.offering.finalSute || selectedEntry.offering.sute} ${(selectedEntry.offering.finalSuteUnit || selectedEntry.offering.suteUnit) === 'per_ton' ? '/Ton' : (selectedEntry.offering.finalSuteUnit || selectedEntry.offering.suteUnit) === 'per_quintal' ? '/Qtl' : '/Bag'}`} />
-                                                                )}
-                                                                <DetailItem label="Hamali" value={selectedEntry.offering.hamali ? `${selectedEntry.offering.hamali} ${selectedEntry.offering.hamaliUnit === 'per_quintal' ? '/Qtl' : '/Bag'}` : '-'} />
-                                                                <DetailItem label="Brokerage" value={selectedEntry.offering.brokerage ? `${selectedEntry.offering.brokerage} ${selectedEntry.offering.brokerageUnit === 'per_quintal' ? '/Qtl' : '/Bag'}` : '-'} />
-                                                                <DetailItem label="LF" value={selectedEntry.offering.lf ? `${selectedEntry.offering.lf} ${selectedEntry.offering.lfUnit === 'per_quintal' ? '/Qtl' : '/Bag'}` : '-'} />
-                                                                <DetailItem label="EGB" value={selectedEntry.offering.egbType === 'purchase' ? `${selectedEntry.offering.egbValue || '-'} (Purchase)` : (selectedEntry.offering.baseRateType || '').includes('LOOSE') ? '0 (Mill)' : '-'} />
-                                                                <DetailItem label="Finalized" value={selectedEntry.offering.isFinalized ? '✅ Yes' : '❌ No'} />
-                                                            </div>
-                                                        </div>
-                                                    ) : (
-                                                        <p style={{ color: '#999', fontSize: '12px', fontStyle: 'italic' }}>Not added yet</p>
-                                                    )}
-                                                </div>
-
-                                                {/* Workflow Status */}
-                                                <div style={{ marginTop: '16px' }}>
-                                                    <h4 style={{ margin: '0 0 10px', fontSize: '13px', color: '#c62828', borderBottom: '2px solid #c62828', paddingBottom: '6px' }}>📊 Workflow Status</h4>
-                                                    <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: '8px' }}>
-                                                        <DetailItem label="Current Status" value={selectedEntry.workflowStatus.replace(/_/g, ' ').toLowerCase().replace(/\b\w/g, (c: string) => c.toUpperCase())} />
-                                                        <DetailItem label="Lot Decision" value={selectedEntry.lotSelectionDecision?.replace(/_/g, ' ') || '-'} />
-                                                        <DetailItem label="Supervisor" value={(selectedEntry as any).supervisorName || '-'} />
-                                                    </div>
-                                                </div>
-                                            </>
+                            {/* Full mode: Cooking, Final Rate, Workflow */}
+                            {detailMode === 'full' && (
+                                <>
+                                    {/* Cooking Report */}
+                                    <div style={{ marginTop: '16px' }}>
+                                        <h4 style={{ margin: '0 0 10px', fontSize: '13px', color: '#e65100', borderBottom: '2px solid #e65100', paddingBottom: '6px' }}>🍚 Cooking Report</h4>
+                                        {selectedEntry.cookingReport ? (
+                                            <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: '8px' }}>
+                                                <DetailItem label="Status" value={selectedEntry.cookingReport.status === 'MEDIUM' ? 'PASS' : (selectedEntry.cookingReport.status || '-')} />
+                                                <DetailItem label="Cooking Result" value={selectedEntry.cookingReport.cookingResult || '-'} />
+                                                <DetailItem label="Recheck Count" value={selectedEntry.cookingReport.recheckCount ? String(selectedEntry.cookingReport.recheckCount) : '-'} />
+                                            </div>
+                                        ) : (
+                                            <p style={{ color: '#999', fontSize: '12px', fontStyle: 'italic' }}>Not added yet</p>
                                         )}
-
-                                        {/* Close button at bottom */}
-                                        <button onClick={() => { setShowDetailModal(false); setSelectedEntry(null); }}
-                                            style={{ marginTop: '16px', width: '100%', padding: '8px', backgroundColor: '#e74c3c', color: 'white', border: 'none', borderRadius: '4px', fontSize: '13px', fontWeight: '600', cursor: 'pointer' }}>
-                                            Close
-                                        </button>
                                     </div>
+
+                                    {/* Final Rate */}
+                                    <div style={{ marginTop: '16px' }}>
+                                        <h4 style={{ margin: '0 0 10px', fontSize: '13px', color: '#0d47a1', borderBottom: '2px solid #0d47a1', paddingBottom: '6px' }}>💰 Final Rate</h4>
+                                        {selectedEntry.offering ? (
+                                            <div>
+                                                <div style={{ background: '#e3f2fd', padding: '8px 12px', borderRadius: '6px', marginBottom: '6px' }}>
+                                                    <span style={{ fontSize: '11px', color: '#666', fontWeight: '600' }}>RATE: </span>
+                                                    <span style={{ fontSize: '15px', fontWeight: '800', color: '#1565c0' }}>
+                                                        {selectedEntry.offering.finalPrice ? `₹${selectedEntry.offering.finalPrice}` : selectedEntry.offering.finalBaseRate ? `₹${selectedEntry.offering.finalBaseRate}` : selectedEntry.offering.offerBaseRateValue ? `₹${selectedEntry.offering.offerBaseRateValue}` : 'Not set'}
+                                                    </span>
+                                                    {selectedEntry.offering.baseRateType && (
+                                                        <span style={{ fontSize: '11px', color: '#555', marginLeft: '6px' }}>
+                                                            {selectedEntry.offering.baseRateType.replace(/_/g, '/')} | {selectedEntry.offering.baseRateUnit === 'per_quintal' ? 'Per Quintal' : selectedEntry.offering.baseRateUnit === 'per_ton' ? 'Per Ton' : 'Per Bag'}
+                                                        </span>
+                                                    )}
+                                                </div>
+                                                <div style={{ display: 'grid', gridTemplateColumns: 'repeat(4, 1fr)', gap: '6px' }}>
+                                                    {(selectedEntry.offering.finalSute || selectedEntry.offering.sute) && (
+                                                        <DetailItem label="Sute" value={`${selectedEntry.offering.finalSute || selectedEntry.offering.sute} ${(selectedEntry.offering.finalSuteUnit || selectedEntry.offering.suteUnit) === 'per_ton' ? '/Ton' : (selectedEntry.offering.finalSuteUnit || selectedEntry.offering.suteUnit) === 'per_quintal' ? '/Qtl' : '/Bag'}`} />
+                                                    )}
+                                                    <DetailItem label="Hamali" value={selectedEntry.offering.hamali ? `${selectedEntry.offering.hamali} ${selectedEntry.offering.hamaliUnit === 'per_quintal' ? '/Qtl' : '/Bag'}` : '-'} />
+                                                    <DetailItem label="Brokerage" value={selectedEntry.offering.brokerage ? `${selectedEntry.offering.brokerage} ${selectedEntry.offering.brokerageUnit === 'per_quintal' ? '/Qtl' : '/Bag'}` : '-'} />
+                                                    <DetailItem label="LF" value={selectedEntry.offering.lf ? `${selectedEntry.offering.lf} ${selectedEntry.offering.lfUnit === 'per_quintal' ? '/Qtl' : '/Bag'}` : '-'} />
+                                                    <DetailItem label="EGB" value={selectedEntry.offering.egbType === 'purchase' ? `${selectedEntry.offering.egbValue || '-'} (Purchase)` : (selectedEntry.offering.baseRateType || '').includes('LOOSE') ? '0 (Mill)' : '-'} />
+                                                    <DetailItem label="Finalized" value={selectedEntry.offering.isFinalized ? '✅ Yes' : '❌ No'} />
+                                                </div>
+                                            </div>
+                                        ) : (
+                                            <p style={{ color: '#999', fontSize: '12px', fontStyle: 'italic' }}>Not added yet</p>
+                                        )}
+                                    </div>
+
+                                    {/* Workflow Status */}
+                                    <div style={{ marginTop: '16px' }}>
+                                        <h4 style={{ margin: '0 0 10px', fontSize: '13px', color: '#c62828', borderBottom: '2px solid #c62828', paddingBottom: '6px' }}>📊 Workflow Status</h4>
+                                        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: '8px' }}>
+                                            <DetailItem label="Current Status" value={selectedEntry.workflowStatus.replace(/_/g, ' ').toLowerCase().replace(/\b\w/g, (c: string) => c.toUpperCase())} />
+                                            <DetailItem label="Lot Decision" value={selectedEntry.lotSelectionDecision?.replace(/_/g, ' ') || '-'} />
+                                            <DetailItem label="Supervisor" value={(selectedEntry as any).supervisorName || '-'} />
+                                        </div>
+                                    </div>
+                                </>
+                            )}
+
+                            {/* Close button at bottom */}
+                            <button onClick={() => { setShowDetailModal(false); setSelectedEntry(null); }}
+                                style={{ marginTop: '16px', width: '100%', padding: '8px', backgroundColor: '#e74c3c', color: 'white', border: 'none', borderRadius: '4px', fontSize: '13px', fontWeight: '600', cursor: 'pointer' }}>
+                                Close
+                            </button>
+                        </div>
                     </div>
-                    </div>
-            )}
                 </div>
-            );
+            )}
+        </div>
+    );
 };
 
-            export default AdminSampleBook;
+export default AdminSampleBook;
