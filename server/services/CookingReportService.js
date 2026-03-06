@@ -13,13 +13,13 @@ class CookingReportService {
   async createCookingReport(reportData, userId, userRole) {
     try {
       // Validate required fields
-      if (!reportData.sampleEntryId || !reportData.status) {
-        throw new Error('Sample entry ID and status are required');
+      if (!reportData.sampleEntryId) {
+        throw new Error('Sample entry ID is required');
       }
 
       // Validate status
       const validStatuses = ['PASS', 'FAIL', 'RECHECK', 'MEDIUM'];
-      if (!validStatuses.includes(reportData.status)) {
+      if (reportData.status && !validStatuses.includes(reportData.status)) {
         throw new Error('Invalid cooking report status');
       }
 
@@ -29,35 +29,60 @@ class CookingReportService {
       const existing = await CookingReportRepository.findBySampleEntryId(reportData.sampleEntryId);
 
       let report;
+      const historyEntry = {
+        date: reportData.manualDate ? new Date(reportData.manualDate).toISOString() : new Date().toISOString(),
+        status: reportData.status || null,
+        cookingDoneBy: reportData.cookingDoneBy || null,
+        approvedBy: reportData.cookingApprovedBy || null,
+      };
+
       if (existing) {
         console.log(`[COOKING] Updating existing cooking report for sample entry: ${reportData.sampleEntryId}`);
-        report = await CookingReportRepository.update(existing.id, reportData);
+        const updates = { ...reportData };
+        if (!updates.status && existing.status) {
+          delete updates.status;
+        } else if (!updates.status) {
+          updates.status = null;
+        }
+
+        // Append to existing history
+        const currentHistory = Array.isArray(existing.history) ? existing.history : [];
+        updates.history = [...currentHistory, historyEntry];
+
+        report = await CookingReportRepository.update(existing.id, updates);
         await AuditService.logUpdate(userId, 'cooking_reports', report.id, existing, report);
       } else {
         console.log(`[COOKING] Creating new cooking report for sample entry: ${reportData.sampleEntryId}`);
+        if (!reportData.status) {
+          reportData.status = null;
+        }
+        reportData.history = [historyEntry];
         report = await CookingReportRepository.create(reportData);
         await AuditService.logCreate(userId, 'cooking_reports', report.id, report);
       }
 
       // Transition workflow based on status
-      let nextStatus;
-      if (reportData.status === 'PASS' || reportData.status === 'MEDIUM') {
-        // PASS and MEDIUM both move to FINAL_REPORT
-        nextStatus = 'FINAL_REPORT';
-      } else if (reportData.status === 'FAIL') {
-        nextStatus = 'FAILED';
-      } else {
-        // RECHECK - stay in COOKING_REPORT
-        return report;
-      }
+      const currentStatus = reportData.status || (existing && existing.status);
+      if (currentStatus) {
+        let nextStatus;
+        if (currentStatus === 'PASS' || currentStatus === 'MEDIUM') {
+          // PASS and MEDIUM both move to LOT_SELECTION (Final Pass Lots)
+          nextStatus = 'LOT_SELECTION';
+        } else if (currentStatus === 'FAIL') {
+          nextStatus = 'FAILED';
+        } else {
+          // RECHECK - stay in COOKING_REPORT
+          return report;
+        }
 
-      await WorkflowEngine.transitionTo(
-        reportData.sampleEntryId,
-        nextStatus,
-        userId,
-        userRole,
-        { cookingReportId: report.id, cookingStatus: reportData.status }
-      );
+        await WorkflowEngine.transitionTo(
+          reportData.sampleEntryId,
+          nextStatus,
+          userId,
+          userRole,
+          { cookingReportId: report.id, cookingStatus: currentStatus }
+        );
+      }
 
       return report;
 

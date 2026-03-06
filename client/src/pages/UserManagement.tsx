@@ -156,10 +156,12 @@ const ModalOverlay = styled.div`
 
 const ModalContent = styled.div`
   background: white;
-  padding: 2rem;
+  padding: 1.5rem;
   border-radius: 16px;
   width: 100%;
   max-width: 450px;
+  max-height: 85vh;
+  overflow-y: auto;
   box-shadow: 0 20px 40px rgba(0, 0, 0, 0.2);
 `;
 
@@ -276,6 +278,8 @@ interface User {
     username: string;
     role: 'owner' | 'staff' | 'manager' | 'admin' | 'quality_supervisor' | 'physical_supervisor' | 'inventory_staff' | 'financial_account';
     isActive: boolean;
+    staffType?: string;
+    qualityName?: string;
     createdAt: string;
     updatedAt: string;
 }
@@ -293,6 +297,8 @@ const EditModal: React.FC<EditModalProps> = ({ user, mode, onClose, onSave }) =>
     const [password, setPassword] = useState('');
     const [role, setRole] = useState<string>(user?.role || 'staff');
     const [staffType, setStaffType] = useState<'mill' | 'location'>('mill');
+    const [qualityEnabled, setQualityEnabled] = useState(false);
+    const [qualityName, setQualityName] = useState('');
     const [loading, setLoading] = useState(false);
 
     const handleSubmit = async (e: React.FormEvent) => {
@@ -312,7 +318,8 @@ const EditModal: React.FC<EditModalProps> = ({ user, mode, onClose, onSave }) =>
                     username,
                     password,
                     role,
-                    ...(role === 'staff' ? { staffType } : {})
+                    ...(role === 'staff' ? { staffType } : {}),
+                    ...(qualityEnabled ? { qualityName } : {})
                 });
                 toast.success('User created successfully');
             } else {
@@ -364,7 +371,14 @@ const EditModal: React.FC<EditModalProps> = ({ user, mode, onClose, onSave }) =>
                         <Input
                             type="text"
                             value={username}
-                            onChange={e => setUsername(e.target.value.toLowerCase())}
+                            onChange={e => {
+                                const val = e.target.value;
+                                if (val) {
+                                    setUsername(val.charAt(0).toUpperCase() + val.slice(1).toLowerCase());
+                                } else {
+                                    setUsername('');
+                                }
+                            }}
                             placeholder="Enter username"
                             required={mode === 'create'}
                         />
@@ -389,11 +403,9 @@ const EditModal: React.FC<EditModalProps> = ({ user, mode, onClose, onSave }) =>
                             <Label>Role *</Label>
                             <Select value={role} onChange={e => setRole(e.target.value)}>
                                 <option value="owner">Owner</option>
-                                <option value="staff">Staff</option>
+                                <option value="staff">Paddy Supervisor</option>
                                 <option value="manager">Manager</option>
                                 <option value="admin">Admin</option>
-                                <option value="quality_supervisor">Quality Supervisor</option>
-                                <option value="physical_supervisor">Physical Supervisor</option>
                                 <option value="inventory_staff">Inventory Staff</option>
                                 <option value="financial_account">Financial Account</option>
                             </Select>
@@ -402,7 +414,7 @@ const EditModal: React.FC<EditModalProps> = ({ user, mode, onClose, onSave }) =>
 
                     {mode === 'create' && role === 'staff' && (
                         <FormGroup>
-                            <Label>Staff Type *</Label>
+                            <Label>Paddy Supervisor Type *</Label>
                             <div style={{ display: 'flex', gap: '20px', padding: '8px 0' }}>
                                 <label style={{ display: 'flex', alignItems: 'center', gap: '8px', cursor: 'pointer', fontSize: '0.9rem', fontWeight: staffType === 'mill' ? '700' : '400', color: staffType === 'mill' ? '#2563eb' : '#374151' }}>
                                     <input
@@ -413,7 +425,7 @@ const EditModal: React.FC<EditModalProps> = ({ user, mode, onClose, onSave }) =>
                                         onChange={() => setStaffType('mill')}
                                         style={{ accentColor: '#2563eb' }}
                                     />
-                                    🏭 Mill
+                                    🏭 Mill Staff
                                 </label>
                                 <label style={{ display: 'flex', alignItems: 'center', gap: '8px', cursor: 'pointer', fontSize: '0.9rem', fontWeight: staffType === 'location' ? '700' : '400', color: staffType === 'location' ? '#e65100' : '#374151' }}>
                                     <input
@@ -424,14 +436,54 @@ const EditModal: React.FC<EditModalProps> = ({ user, mode, onClose, onSave }) =>
                                         onChange={() => setStaffType('location')}
                                         style={{ accentColor: '#e65100' }}
                                     />
-                                    📍 Location
+                                    📍 Location Staff
                                 </label>
                             </div>
                             <HelpText>
                                 {staffType === 'mill'
-                                    ? 'Mill staff can access: Mill Sample + Sample Book'
-                                    : 'Location staff can access: Location Sample + Sample Book'}
+                                    ? 'Mill Staff can access: Mill Sample, Sample Book, Ready Lorry, New Mill Sample'
+                                    : 'Location Staff can access: Location Sample, Mill Sample, Sample Book'}
                             </HelpText>
+                        </FormGroup>
+                    )}
+
+                    {mode === 'create' && (
+                        <FormGroup>
+                            <Label>Quality</Label>
+                            <div style={{ display: 'flex', gap: '20px', padding: '8px 0' }}>
+                                <label style={{ display: 'flex', alignItems: 'center', gap: '8px', cursor: 'pointer', fontSize: '0.9rem', fontWeight: qualityEnabled ? '700' : '400', color: qualityEnabled ? '#16a34a' : '#374151' }}>
+                                    <input
+                                        type="radio"
+                                        name="qualityEnabled"
+                                        checked={qualityEnabled}
+                                        onChange={() => setQualityEnabled(true)}
+                                        style={{ accentColor: '#16a34a' }}
+                                    />
+                                    Yes
+                                </label>
+                                <label style={{ display: 'flex', alignItems: 'center', gap: '8px', cursor: 'pointer', fontSize: '0.9rem', fontWeight: !qualityEnabled ? '700' : '400', color: !qualityEnabled ? '#374151' : '#374151' }}>
+                                    <input
+                                        type="radio"
+                                        name="qualityEnabled"
+                                        checked={!qualityEnabled}
+                                        onChange={() => { setQualityEnabled(false); setQualityName(''); }}
+                                        style={{ accentColor: '#374151' }}
+                                    />
+                                    No
+                                </label>
+                            </div>
+                            {qualityEnabled && (
+                                <>
+                                    <Label style={{ marginTop: '8px' }}>Quality Name *</Label>
+                                    <Input
+                                        type="text"
+                                        value={qualityName}
+                                        onChange={e => setQualityName(e.target.value)}
+                                        placeholder="Enter quality name"
+                                        required
+                                    />
+                                </>
+                            )}
                         </FormGroup>
                     )}
 
@@ -579,7 +631,7 @@ const UserManagement: React.FC = () => {
                             <Tr key={user.id}>
                                 <Td>{user.id}</Td>
                                 <Td>
-                                    <strong>{user.username}</strong>
+                                    <strong style={{ textTransform: 'capitalize' }}>{user.username}</strong>
                                     {user.id === currentUser?.id && (
                                         <span style={{ marginLeft: '8px', fontSize: '0.75rem', color: '#6b7280' }}>(You)</span>
                                     )}
@@ -592,14 +644,34 @@ const UserManagement: React.FC = () => {
                                         style={{ padding: '0.4rem', borderRadius: '6px', fontSize: '0.85rem' }}
                                     >
                                         <option value="owner">Owner</option>
-                                        <option value="staff">Staff</option>
+                                        <option value="staff">Paddy Supervisor</option>
                                         <option value="manager">Manager</option>
                                         <option value="admin">Admin</option>
-                                        <option value="quality_supervisor">Quality Supervisor</option>
-                                        <option value="physical_supervisor">Physical Supervisor</option>
                                         <option value="inventory_staff">Inventory Staff</option>
                                         <option value="financial_account">Financial Account</option>
                                     </Select>
+                                    {user.role === 'staff' && (
+                                        <button
+                                            onClick={async () => {
+                                                const newType = user.staffType === 'location' ? 'mill' : 'location';
+                                                try {
+                                                    await axios.put(`/admin/users/${user.id}/role`, { role: 'staff', staffType: newType });
+                                                    toast.success(`Staff type changed to ${newType}`);
+                                                    fetchUsers();
+                                                } catch (err: any) {
+                                                    toast.error(err.response?.data?.error || 'Failed to update staff type');
+                                                }
+                                            }}
+                                            style={{
+                                                marginTop: '4px', padding: '3px 8px', fontSize: '0.75rem', fontWeight: '600',
+                                                border: '1px solid #ddd', borderRadius: '4px', cursor: 'pointer',
+                                                backgroundColor: user.staffType === 'location' ? '#fff3e0' : '#e3f2fd',
+                                                color: user.staffType === 'location' ? '#e65100' : '#1565c0'
+                                            }}
+                                        >
+                                            {user.staffType === 'location' ? '📍 Location → 🏭 Mill' : '🏭 Mill → 📍 Location'}
+                                        </button>
+                                    )}
                                 </Td>
                                 <Td>
                                     <StatusBadge active={user.isActive}>

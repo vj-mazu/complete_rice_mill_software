@@ -65,7 +65,7 @@ const SampleEntry = sequelize.define('SampleEntry', {
     field: 'lorry_number'
   },
   entryType: {
-    type: DataTypes.ENUM('CREATE_NEW', 'DIRECT_LOADED_VEHICLE', 'NEW_PADDY_SAMPLE', 'READY_LORRY', 'LOCATION_SAMPLE'),
+    type: DataTypes.ENUM('CREATE_NEW', 'DIRECT_LOADED_VEHICLE', 'NEW_PADDY_SAMPLE', 'READY_LORRY', 'LOCATION_SAMPLE', 'RICE_SAMPLE'),
     allowNull: false,
     field: 'entry_type'
   },

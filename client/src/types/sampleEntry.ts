@@ -1,4 +1,4 @@
-export type EntryType = 'CREATE_NEW' | 'DIRECT_LOADED_VEHICLE' | 'LOCATION_SAMPLE';
+export type EntryType = 'CREATE_NEW' | 'DIRECT_LOADED_VEHICLE' | 'LOCATION_SAMPLE' | 'RICE_SAMPLE';
 
 export type WorkflowStatus =
   | 'STAFF_ENTRY'
@@ -83,6 +83,8 @@ export interface CookingReport {
   sampleEntryId: number;
   status: CookingReportStatus;
   remarks?: string;
+  cookingDoneBy?: string;
+  cookingApprovedBy?: string;
   reportedByUserId: number;
   createdAt: string;
 }

@@ -305,7 +305,7 @@ const Navbar: React.FC = () => {
     '/sample-entry', '/sample-entry-ledger', '/sample-workflow',
     '/inventory-entry', '/owner-financial', '/manager-financial',
     '/final-review', '/owner-sample-reports', '/allotting-supervisors',
-    '/physical-inspection', '/pending-approvals', '/loading-lots'
+    '/physical-inspection', '/pending-approvals', '/loading-lots', '/cooking-book'
   ];
   const ledgersPaths = ['/ledger', '/rice-ledger', '/sample-entry-ledger', '/hamali-book', '/egb-ledger'];
 
@@ -323,7 +323,10 @@ const Navbar: React.FC = () => {
         <NavLinks $mobileOpen={mobileMenuOpen}>
           {user?.role !== 'staff' && <NavLink to="/dashboard" $active={isActive('/dashboard')}>Dashboard</NavLink>}
           {user && user.role === 'staff' && (
-            <NavLink to="/sample-entry" $active={isActive('/sample-entry')}>Sample Entry</NavLink>
+            <>
+              <NavLink to="/sample-entry" $active={isActive('/sample-entry')}>Sample Entry</NavLink>
+              <NavLink to="/cooking-book" $active={isActive('/cooking-book')}>Cooking Book</NavLink>
+            </>
           )}
           {user && user.role === 'manager' && (
             <>
@@ -439,8 +442,8 @@ const Navbar: React.FC = () => {
           )}
 
           <UserInfo>
-            <UserBadge>{user?.role}</UserBadge>
-            <span>{user?.username}</span>
+            <UserBadge>{user?.role === 'staff' ? 'Paddy Supervisor' : user?.role}</UserBadge>
+            <span style={{ textTransform: 'capitalize' }}>{user?.username}</span>
           </UserInfo>
           <LogoutButton onClick={handleLogout}>Logout</LogoutButton>
         </NavLinks>

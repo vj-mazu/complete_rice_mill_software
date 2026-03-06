@@ -22,12 +22,17 @@ interface SampleEntry {
     supervisorName?: string;
 }
 
-const DetailItem: React.FC<{ label: string; value: string }> = ({ label, value }) => (
-    <div style={{ background: '#f8f9fa', padding: '8px 10px', borderRadius: '6px', border: '1px solid #e0e0e0' }}>
-        <div style={{ fontSize: '10px', color: '#666', marginBottom: '2px', fontWeight: '600', textTransform: 'capitalize' }}>{label}</div>
-        <div style={{ fontSize: '13px', fontWeight: '700', color: '#2c3e50' }}>{value || '-'}</div>
-    </div>
-);
+const DetailItem: React.FC<{ label: string; value: React.ReactNode }> = ({ label, value }) => {
+    const isBold = ['Grains Count', 'Paddy WB'].includes(label);
+    return (
+        <div style={{ background: '#f8f9fa', padding: '8px 10px', borderRadius: '6px', border: '1px solid #e0e0e0' }}>
+            <div style={{ fontSize: '11px', color: '#666', marginBottom: '2px', fontWeight: '600', textTransform: 'capitalize' }}>{label}</div>
+            <div style={{ fontSize: '13px', fontWeight: isBold ? '800' : '700', color: isBold ? '#000' : '#2c3e50' }}>{value || '-'}</div>
+        </div>
+    );
+};
+
+const toTitleCase = (str: string) => str ? str.replace(/\b\w/g, c => c.toUpperCase()) : '';
 
 const AdminSampleBook: React.FC = () => {
     const [entries, setEntries] = useState<SampleEntry[]>([]);
@@ -69,35 +74,35 @@ const AdminSampleBook: React.FC = () => {
     const getStatusBadge = (status: string) => {
         const colors: Record<string, { bg: string; color: string; label: string }> = {
             STAFF_ENTRY: { bg: '#e3f2fd', color: '#1565c0', label: 'Sample Entry Done' },
-            QUALITY_CHECK: { bg: '#fff3e0', color: '#e65100', label: 'Pending Quality Check' },
+            QUALITY_CHECK: { bg: '#ffe0b2', color: '#e65100', label: 'Pending Quality Check' },
             LOT_SELECTION: { bg: '#f3e5f5', color: '#7b1fa2', label: 'Pending Sample Selection' },
             COOKING_REPORT: { bg: '#fff8e1', color: '#f57f17', label: 'Pending Cooking Report' },
             FINAL_REPORT: { bg: '#e8eaf6', color: '#283593', label: 'Pending Final Pass' },
             LOT_ALLOTMENT: { bg: '#e0f7fa', color: '#006064', label: 'Pending Loading Lots' },
             PENDING_ALLOTTING_SUPERVISOR: { bg: '#fce4ec', color: '#880e4f', label: 'Pending Supervisor Allotment' },
-            PHYSICAL_INSPECTION: { bg: '#fff3e0', color: '#bf360c', label: 'Physical Inspection' },
+            PHYSICAL_INSPECTION: { bg: '#ffe0b2', color: '#bf360c', label: 'Physical Inspection' },
             INVENTORY_ENTRY: { bg: '#f1f8e9', color: '#33691e', label: 'Inventory Entry' },
             COMPLETED: { bg: '#c8e6c9', color: '#1b5e20', label: 'Completed' },
             FAILED: { bg: '#ffcdd2', color: '#b71c1c', label: 'Failed' },
         };
         const c = colors[status] || { bg: '#f5f5f5', color: '#666', label: status.replace(/_/g, ' ') };
-        return <span style={{ padding: '2px 8px', borderRadius: '12px', fontSize: '11px', fontWeight: '600', background: c.bg, color: c.color }}>{c.label}</span>;
+        return <span style={{ padding: '1px 6px', borderRadius: '10px', fontSize: '10px', fontWeight: '600', background: c.bg, color: c.color, whiteSpace: 'nowrap' }}>{c.label}</span>;
     };
 
     const getDecisionBadge = (decision: string) => {
         if (!decision) return '-';
         const map: Record<string, { label: string; bg: string; color: string }> = {
-            PASS_WITH_COOKING: { label: 'Pass + Cooking', bg: '#fff3e0', color: '#e65100' },
+            PASS_WITH_COOKING: { label: 'Pass + Cooking', bg: '#ffe0b2', color: '#e65100' },
             PASS_WITHOUT_COOKING: { label: 'Pass', bg: '#e8f5e9', color: '#2e7d32' },
             FAIL: { label: 'Fail', bg: '#ffcdd2', color: '#b71c1c' },
         };
         const d = map[decision] || { label: decision, bg: '#f5f5f5', color: '#666' };
-        return <span style={{ padding: '2px 8px', borderRadius: '12px', fontSize: '11px', fontWeight: '600', background: d.bg, color: d.color }}>{d.label}</span>;
+        return <span style={{ padding: '1px 6px', borderRadius: '10px', fontSize: '10px', fontWeight: '600', background: d.bg, color: d.color, whiteSpace: 'nowrap' }}>{d.label}</span>;
     };
 
     const statusCounts = {
         staff: entries.filter(e => e.workflowStatus === 'STAFF_ENTRY').length,
-        quality: entries.filter(e => e.qualityParameters?.moisture != null).length,
+        quality: entries.filter(e => e.qualityParameters?.moisture != null || (e.qualityParameters as any)?.dryMoisture != null).length,
         cooking: entries.filter(e => e.cookingReport?.status).length,
         passed: entries.filter(e => e.lotSelectionDecision?.includes('PASS')).length,
         offer: entries.filter(e => e.offering?.offerRate || e.offering?.offerBaseRateValue).length,
@@ -108,14 +113,14 @@ const AdminSampleBook: React.FC = () => {
     return (
         <div>
             {/* Summary Cards */}
-            <div style={{ display: 'flex', gap: '10px', marginBottom: '12px', flexWrap: 'wrap' }}>
+            <div style={{ display: 'flex', gap: '10px', marginBottom: '0px', flexWrap: 'wrap' }}>
                 <div style={{ background: '#e3f2fd', padding: '8px 12px', borderRadius: '6px', fontSize: '12px' }}>
                     <span style={{ color: '#1565c0', fontWeight: '600' }}>Staff Entry:</span> {statusCounts.staff}
                 </div>
                 <div style={{ background: '#c8e6c9', padding: '8px 12px', borderRadius: '6px', fontSize: '12px' }}>
                     <span style={{ color: '#2e7d32', fontWeight: '600' }}>Quality Done:</span> {statusCounts.quality}
                 </div>
-                <div style={{ background: '#fff3e0', padding: '8px 12px', borderRadius: '6px', fontSize: '12px' }}>
+                <div style={{ background: '#ffe0b2', padding: '8px 12px', borderRadius: '6px', fontSize: '12px' }}>
                     <span style={{ color: '#e65100', fontWeight: '600' }}>Cooking:</span> {statusCounts.cooking}
                 </div>
                 <div style={{ background: '#e1bee7', padding: '8px 12px', borderRadius: '6px', fontSize: '12px' }}>
@@ -124,7 +129,7 @@ const AdminSampleBook: React.FC = () => {
                 <div style={{ background: '#b2dfdb', padding: '8px 12px', borderRadius: '6px', fontSize: '12px' }}>
                     <span style={{ color: '#00695c', fontWeight: '600' }}>Offer:</span> {statusCounts.offer}
                 </div>
-                <div style={{ background: '#bbdefb', padding: '8px 12px', borderRadius: '6px', fontSize: '12px' }}>
+                <div style={{ background: '#e3f2fd', padding: '8px 12px', borderRadius: '6px', fontSize: '12px' }}>
                     <span style={{ color: '#0d47a1', fontWeight: '600' }}>Final:</span> {statusCounts.final}
                 </div>
                 <div style={{ background: '#a5d6a7', padding: '8px 12px', borderRadius: '6px', fontSize: '12px' }}>
@@ -151,30 +156,43 @@ const AdminSampleBook: React.FC = () => {
                     ))}
                     <input type="date" value={filters.startDate} onChange={e => setFilters({ ...filters, startDate: e.target.value })} style={{ padding: '6px 10px', fontSize: '13px', border: '1px solid #ccc', borderRadius: '4px' }} />
                     <input type="date" value={filters.endDate} onChange={e => setFilters({ ...filters, endDate: e.target.value })} style={{ padding: '6px 10px', fontSize: '13px', border: '1px solid #ccc', borderRadius: '4px' }} />
-                    <button onClick={() => { setPage(1); fetchEntries(); }} style={{ padding: '6px 14px', background: '#27ae60', color: 'white', border: 'none', borderRadius: '4px', cursor: 'pointer', fontSize: '13px' }}>Apply</button>
+                    <button onClick={() => { setPage(1); setTimeout(() => fetchEntries(), 0); }} style={{ padding: '6px 14px', background: '#27ae60', color: 'white', border: 'none', borderRadius: '4px', cursor: 'pointer', fontSize: '13px' }}>Apply Filters</button>
                     <button onClick={() => { setFilters({ broker: '', variety: '', party: '', location: '', startDate: '', endDate: '' }); setPage(1); }} style={{ padding: '6px 14px', background: '#95a5a6', color: 'white', border: 'none', borderRadius: '4px', cursor: 'pointer', fontSize: '13px' }}>Clear</button>
                 </div>
             )}
 
-            <div style={{ overflowX: 'auto', borderRadius: '6px', border: '1px solid #ddd' }}>
-                <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: '12px' }}>
+            <div style={{ overflowX: 'auto', borderRadius: '6px' }}>
+                <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: '11px', tableLayout: 'fixed', border: '1px solid #000' }}>
                     <thead>
-                        <tr style={{ background: 'linear-gradient(135deg, #6c3483, #8e44ad)', color: 'white' }}>
-                            {['SL', 'Date', 'Broker', 'Bags', 'Pkg', 'Party', 'Paddy Location', 'Variety', 'Staff', 'Quality', 'Decision of Cooking', 'Cooking Report', 'Final ₹', 'Status', 'Action'].map(h => (
-                                <th key={h} style={{ padding: '8px 6px', textAlign: 'center', fontWeight: '600', whiteSpace: 'nowrap', fontSize: '10px' }}>{h}</th>
-                            ))}
+                        <tr style={{ background: '#1a237e', color: 'white' }}>
+                            <th style={{ border: '1px solid #000', padding: '4px 5px', fontWeight: '600', fontSize: '11px', textAlign: 'center', whiteSpace: 'nowrap', width: '3%' }}>SL No</th>
+                            <th style={{ border: '1px solid #000', padding: '4px 5px', fontWeight: '600', fontSize: '11px', textAlign: 'center', whiteSpace: 'nowrap', width: '3%' }}>Type</th>
+                            <th style={{ border: '1px solid #000', padding: '4px 5px', fontWeight: '600', fontSize: '10px', textAlign: 'left', whiteSpace: 'nowrap', width: '5%' }}>Date</th>
+                            <th style={{ border: '1px solid #000', padding: '4px 5px', fontWeight: '600', fontSize: '10px', textAlign: 'left', whiteSpace: 'nowrap', width: '7%' }}>Broker</th>
+                            <th style={{ border: '1px solid #000', padding: '4px 5px', fontWeight: '600', fontSize: '11px', textAlign: 'center', whiteSpace: 'nowrap', width: '4%' }}>Bags</th>
+                            <th style={{ border: '1px solid #000', padding: '4px 5px', fontWeight: '600', fontSize: '11px', textAlign: 'center', whiteSpace: 'nowrap', width: '3%' }}>Pkg</th>
+                            <th style={{ border: '1px solid #000', padding: '4px 5px', fontWeight: '600', fontSize: '11px', textAlign: 'left', whiteSpace: 'nowrap', width: '10%' }}>Party Name</th>
+                            <th style={{ border: '1px solid #000', padding: '4px 5px', fontWeight: '600', fontSize: '11px', textAlign: 'left', whiteSpace: 'nowrap', width: '10%' }}>Paddy Location</th>
+                            <th style={{ border: '1px solid #000', padding: '4px 5px', fontWeight: '600', fontSize: '11px', textAlign: 'left', whiteSpace: 'nowrap', width: '8%' }}>Variety</th>
+                            <th style={{ border: '1px solid #000', padding: '4px 5px', fontWeight: '600', fontSize: '11px', textAlign: 'center', whiteSpace: 'nowrap', width: '9%' }}>Sample Collected By</th>
+                            <th style={{ border: '1px solid #000', padding: '4px 5px', fontWeight: '600', fontSize: '11px', textAlign: 'center', whiteSpace: 'nowrap', width: '5%' }}>Quality</th>
+                            <th style={{ border: '1px solid #000', padding: '4px 5px', fontWeight: '600', fontSize: '11px', textAlign: 'center', whiteSpace: 'nowrap', width: '5%' }}>Decision</th>
+                            <th style={{ border: '1px solid #000', padding: '4px 5px', fontWeight: '600', fontSize: '11px', textAlign: 'center', whiteSpace: 'nowrap', width: '5%' }}>Cooking</th>
+                            <th style={{ border: '1px solid #000', padding: '4px 5px', fontWeight: '600', fontSize: '11px', textAlign: 'center', whiteSpace: 'nowrap', width: '5%' }}>Final ₹</th>
+                            <th style={{ border: '1px solid #000', padding: '4px 5px', fontWeight: '600', fontSize: '11px', textAlign: 'center', whiteSpace: 'nowrap', width: '5%' }}>Status</th>
+                            <th style={{ border: '1px solid #000', padding: '4px 5px', fontWeight: '600', fontSize: '11px', textAlign: 'center', whiteSpace: 'nowrap', width: '4%' }}>Action</th>
                         </tr>
                     </thead>
                     <tbody>
                         {loading ? (
-                            <tr><td colSpan={20} style={{ textAlign: 'center', padding: '30px', color: '#888' }}>Loading...</td></tr>
+                            <tr><td colSpan={20} style={{ border: '1px solid #000', textAlign: 'left', padding: '30px', color: '#888' }}>Loading...</td></tr>
                         ) : entries.length === 0 ? (
-                            <tr><td colSpan={16} style={{ textAlign: 'center', padding: '30px', color: '#888' }}>No entries in sample book</td></tr>
+                            <tr><td colSpan={16} style={{ border: '1px solid #000', textAlign: 'left', padding: '30px', color: '#888' }}>No entries in sample book</td></tr>
                         ) : entries.map((e, i) => {
                             const qp = e.qualityParameters;
                             const cr = e.cookingReport;
                             const offer = e.offering;
-                            const hasQuality = qp && qp.moisture != null;
+                            const hasQuality = qp && (qp.moisture != null || (qp as any).dryMoisture != null);
                             const hasCooking = cr && cr.status;
 
                             const hasFinal = offer && offer.finalPrice;
@@ -186,85 +204,81 @@ const AdminSampleBook: React.FC = () => {
                                 (offer.lfEnabled === false && !parseFloat(offer.lf))
                             );
                             return (
-                                <tr key={e.id} style={{ background: e.workflowStatus === 'FAILED' || e.lotSelectionDecision === 'FAIL' ? '#fff0f0' : e.workflowStatus === 'COMPLETED' ? '#f0fff0' : i % 2 === 0 ? '#fff' : '#faf5ff', borderBottom: '1px solid #eee', borderLeft: e.workflowStatus === 'FAILED' || e.lotSelectionDecision === 'FAIL' ? '4px solid #e74c3c' : e.workflowStatus === 'COMPLETED' ? '4px solid #27ae60' : 'none' }}>
-                                    <td style={{ padding: '6px', textAlign: 'center', fontWeight: '600', fontSize: '11px' }}>{(i + 1 + (page - 1) * pageSize)}</td>
-                                    <td style={{ padding: '6px', textAlign: 'center', fontSize: '11px' }}>{new Date(e.entryDate).toLocaleDateString('en-IN')}</td>
-                                    <td style={{ padding: '6px', textAlign: 'center', fontSize: '11px' }}>{e.brokerName}</td>
-                                    <td style={{ padding: '6px', textAlign: 'center', fontWeight: '600', fontSize: '11px' }}>{e.bags}</td>
-                                    <td style={{ padding: '6px', textAlign: 'center', fontSize: '11px' }}>{e.packaging || '75'}</td>
-                                    <td style={{ padding: '6px', textAlign: 'center', fontSize: '11px' }}>
+                                <tr key={e.id} style={{ background: e.workflowStatus === 'FAILED' || e.lotSelectionDecision === 'FAIL' ? '#fff0f0' : e.workflowStatus === 'COMPLETED' ? '#f0fff0' : e.entryType === 'DIRECT_LOADED_VEHICLE' ? '#e3f2fd' : e.entryType === 'LOCATION_SAMPLE' ? '#ffe0b2' : '#ffffff', borderLeft: e.workflowStatus === 'FAILED' || e.lotSelectionDecision === 'FAIL' ? '4px solid #e74c3c' : e.workflowStatus === 'COMPLETED' ? '4px solid #27ae60' : 'none' }}>
+                                    <td style={{ border: '1px solid #000', padding: '3px 4px', textAlign: 'center', fontWeight: '600', fontSize: '11px', whiteSpace: 'nowrap' }}>{(i + 1 + (page - 1) * pageSize)}</td>
+                                    <td style={{ border: '1px solid #000', padding: '1px 3px', textAlign: 'center', verticalAlign: 'middle', whiteSpace: 'nowrap' }}>
+                                        {e.entryType === 'DIRECT_LOADED_VEHICLE' && <span style={{ color: 'white', backgroundColor: '#1565c0', padding: '1px 4px', borderRadius: '3px', fontSize: '10px', fontWeight: '800' }}>RL</span>}
+                                        {e.entryType === 'LOCATION_SAMPLE' && <span style={{ color: 'white', backgroundColor: '#e67e22', padding: '1px 4px', borderRadius: '3px', fontSize: '10px', fontWeight: '800' }}>LS</span>}
+                                        {e.entryType !== 'DIRECT_LOADED_VEHICLE' && e.entryType !== 'LOCATION_SAMPLE' && <span style={{ color: '#333', backgroundColor: '#fff', padding: '1px 4px', borderRadius: '3px', fontSize: '10px', fontWeight: '800', border: '1px solid #ccc' }}>MS</span>}
+                                    </td>
+                                    <td style={{ border: '1px solid #000', padding: '2px 4px', textAlign: 'left', fontSize: '9px', whiteSpace: 'nowrap', verticalAlign: 'middle' }}>
+                                        {new Date(e.entryDate).toLocaleDateString('en-IN')} <b style={{ color: e.entryType === 'DIRECT_LOADED_VEHICLE' ? '#1565c0' : e.entryType === 'LOCATION_SAMPLE' ? '#e67e22' : '#555' }}>{e.entryType === 'DIRECT_LOADED_VEHICLE' ? 'RL' : e.entryType === 'LOCATION_SAMPLE' ? 'LS' : 'MS'}</b>
+                                    </td>
+                                    <td style={{ border: '1px solid #000', padding: '2px 4px', textAlign: 'left', fontSize: '9px', whiteSpace: 'nowrap', verticalAlign: 'middle' }}>
+                                        {e.brokerName || '-'}
+                                    </td>
+                                    <td style={{ border: '1px solid #000', padding: '3px 4px', textAlign: 'center', fontWeight: '600', fontSize: '11px', whiteSpace: 'nowrap' }}>{e.bags}</td>
+                                    <td style={{ border: '1px solid #000', padding: '3px 4px', textAlign: 'center', fontWeight: '600', fontSize: '11px', whiteSpace: 'nowrap' }}>{e.packaging || '75'}</td>
+                                    <td style={{ border: '1px solid #000', padding: '3px 4px', textAlign: 'left', fontSize: '11px', whiteSpace: 'nowrap' }}>
                                         {e.partyName ? (
                                             <span
-                                                onClick={() => { setSelectedEntry(e); setDetailMode('quick'); setShowDetailModal(true); }}
-                                                style={{ color: '#1565c0', cursor: 'pointer', textDecoration: 'underline', fontWeight: '600' }}
-                                                title="Click to view details"
+                                                style={{ color: '#333', fontWeight: '600' }}
                                             >
-                                                {e.partyName}
+                                                {toTitleCase(e.partyName)}
                                             </span>
                                         ) : '-'}
+                                        {e.entryType === 'DIRECT_LOADED_VEHICLE' && e.lorryNumber ? <div style={{ fontSize: '10px', color: '#555', fontWeight: '600' }}>{e.lorryNumber.toUpperCase()}</div> : ''}
                                     </td>
-                                    <td style={{ padding: '6px', textAlign: 'center', fontSize: '11px' }}>
+                                    <td style={{ border: '1px solid #000', padding: '3px 4px', textAlign: 'left', fontSize: '11px', whiteSpace: 'nowrap' }}>
                                         {!e.partyName && e.location ? (
                                             <span
-                                                onClick={() => { setSelectedEntry(e); setDetailMode('quick'); setShowDetailModal(true); }}
-                                                style={{ color: '#e65100', cursor: 'pointer', textDecoration: 'underline', fontWeight: '600' }}
-                                                title="Click to view details"
+                                                style={{ color: '#555', fontWeight: '600' }}
                                             >
-                                                {e.location}
+                                                {toTitleCase(e.location)}
                                             </span>
-                                        ) : (e.location || '-')}
+                                        ) : (toTitleCase(e.location) || '-')}
                                     </td>
-                                    <td style={{ padding: '6px', textAlign: 'center', fontSize: '11px' }}>{e.variety}</td>
-                                    <td style={{ padding: '6px', textAlign: 'center', fontSize: '10px' }}>
-                                        {e.creator?.username ? (
-                                            <span style={{ background: '#e3f2fd', color: '#1565c0', padding: '2px 6px', borderRadius: '8px', fontSize: '10px' }}>
-                                                {e.creator.username.substring(0, 4).toUpperCase()}
+                                    <td style={{ border: '1px solid #000', padding: '3px 4px', textAlign: 'left', fontSize: '11px', whiteSpace: 'nowrap' }}>{toTitleCase(e.variety)}</td>
+                                    <td style={{ border: '1px solid #000', padding: '3px 4px', textAlign: 'center', fontSize: '11px', whiteSpace: 'nowrap' }}>
+                                        {e.sampleCollectedBy ? (
+                                            <span style={{ fontSize: '11px', color: '#666' }}>
+                                                {toTitleCase(e.sampleCollectedBy)}
+                                            </span>
+                                        ) : e.creator?.username ? (
+                                            <span style={{ fontSize: '11px', fontWeight: '600', color: '#1565c0' }}>
+                                                {toTitleCase(e.creator.username)}
                                             </span>
                                         ) : '-'}
                                     </td>
-                                    <td style={{ padding: '6px', textAlign: 'center' }}>
+                                    <td style={{ border: '1px solid #000', padding: '3px 4px', textAlign: 'center', whiteSpace: 'nowrap' }}>
                                         {hasQuality ? (
-                                            <span style={{ background: '#c8e6c9', color: '#2e7d32', padding: '2px 8px', borderRadius: '10px', fontSize: '10px', fontWeight: '600' }}>✓ Done</span>
+                                            <span style={{ background: '#c8e6c9', color: '#2e7d32', padding: '1px 6px', borderRadius: '10px', fontSize: '10px', fontWeight: '600' }}>✓ Done</span>
                                         ) : (
-                                            <span style={{ background: '#ffcdd2', color: '#c62828', padding: '2px 8px', borderRadius: '10px', fontSize: '10px' }}>Pending</span>
+                                            <span style={{ background: '#ffccbc', color: '#d84315', padding: '1px 6px', borderRadius: '10px', fontSize: '10px' }}>⏳ No Qlty</span>
                                         )}
                                     </td>
-                                    <td style={{ padding: '6px', textAlign: 'center' }}>{getDecisionBadge(e.lotSelectionDecision)}</td>
-                                    <td style={{ padding: '6px', textAlign: 'center' }}>
+                                    <td style={{ border: '1px solid #000', padding: '3px 4px', textAlign: 'center', whiteSpace: 'nowrap' }}>{getDecisionBadge(e.lotSelectionDecision)}</td>
+                                    <td style={{ border: '1px solid #000', padding: '3px 4px', textAlign: 'center', whiteSpace: 'nowrap' }}>
                                         {hasCooking ? (
                                             cr.status === 'FAIL' || e.lotSelectionDecision === 'FAIL' ? (
-                                                <span style={{ background: '#ffcdd2', color: '#b71c1c', padding: '2px 8px', borderRadius: '10px', fontSize: '10px', fontWeight: '700' }}>✕ Failed</span>
+                                                <span style={{ background: '#ffcdd2', color: '#b71c1c', padding: '1px 6px', borderRadius: '10px', fontSize: '10px', fontWeight: '700' }}>✕ Failed</span>
                                             ) : (
-                                                <span style={{ background: '#c8e6c9', color: '#2e7d32', padding: '2px 8px', borderRadius: '10px', fontSize: '10px', fontWeight: '600' }}>✓ Passed</span>
+                                                <span style={{ background: '#e8f5e9', color: '#2e7d32', padding: '1px 6px', borderRadius: '10px', fontSize: '10px', fontWeight: '700' }}>✓ Passed</span>
                                             )
                                         ) : (
-                                            <span style={{ background: '#fff3e0', color: '#e65100', padding: '2px 8px', borderRadius: '10px', fontSize: '10px' }}>⏳ Pending</span>
+                                            <span style={{ background: '#ffe0b2', color: '#e65100', padding: '1px 6px', borderRadius: '10px', fontSize: '10px' }}>⏳ Pending</span>
                                         )}
                                     </td>
-                                    <td style={{ padding: '6px', textAlign: 'center', fontWeight: '700', fontSize: '11px', color: (hasFinal || offer?.finalBaseRate || offer?.offerBaseRateValue) ? '#1565c0' : '#999' }}>
+                                    <td style={{ border: '1px solid #000', padding: '3px 4px', textAlign: 'center', fontWeight: '700', fontSize: '11px', color: (hasFinal || offer?.finalBaseRate || offer?.offerBaseRateValue) ? '#1565c0' : '#999', whiteSpace: 'nowrap' }}>
                                         {hasFinal ? `₹${offer.finalPrice}` : offer?.finalBaseRate ? `₹${offer.finalBaseRate}` : offer?.offerBaseRateValue ? `₹${offer.offerBaseRateValue}` : '-'}
                                     </td>
-                                    <td style={{ padding: '6px', textAlign: 'center' }}>
-                                        <div style={{ marginBottom: hasFinal ? '4px' : '0' }}>{getStatusBadge(e.workflowStatus)}</div>
-                                        {hasFinal && (
-                                            <>
-                                                <div style={{ marginBottom: '2px' }}>
-                                                    <span style={{ padding: '2px 4px', borderRadius: '10px', fontSize: '9px', fontWeight: '700', background: '#d4edda', color: '#155724', whiteSpace: 'nowrap', display: 'inline-block', border: '1px solid #c3e6cb' }}>
-                                                        Admin Added ✅
-                                                    </span>
-                                                </div>
-                                                <div>
-                                                    <span style={{ padding: '2px 4px', borderRadius: '10px', fontSize: '9px', fontWeight: '700', background: needsFill ? '#fff3cd' : '#d4edda', color: needsFill ? '#856404' : '#155724', whiteSpace: 'nowrap', display: 'inline-block', border: needsFill ? '1px solid #ffeeba' : '1px solid #c3e6cb' }}>
-                                                        {needsFill ? 'Manager Missing ⏳' : 'Manager Added ✅✅'}
-                                                    </span>
-                                                </div>
-                                            </>
-                                        )}
+                                    <td style={{ border: '1px solid #000', padding: '3px 4px', textAlign: 'center', whiteSpace: 'nowrap' }}>
+                                        {getStatusBadge(e.workflowStatus)}
                                     </td>
-                                    <td style={{ padding: '6px', textAlign: 'center' }}>
+                                    <td style={{ border: '1px solid #000', padding: '3px 4px', textAlign: 'center', whiteSpace: 'nowrap' }}>
                                         <button
                                             onClick={() => { setSelectedEntry(e); setDetailMode('full'); setShowDetailModal(true); }}
-                                            style={{ padding: '4px 10px', background: '#3498db', color: 'white', border: 'none', borderRadius: '4px', fontSize: '10px', cursor: 'pointer', fontWeight: '600' }}
+                                            style={{ padding: '3px 8px', background: '#3498db', color: 'white', border: 'none', borderRadius: '4px', fontSize: '10px', cursor: 'pointer', fontWeight: '600' }}
                                         >
                                             👁 View
                                         </button>
@@ -276,172 +290,241 @@ const AdminSampleBook: React.FC = () => {
                 </table>
             </div>
 
-            {totalPages > 1 && (
-                <div style={{ display: 'flex', justifyContent: 'center', gap: '6px', marginTop: '12px' }}>
-                    <button disabled={page <= 1} onClick={() => setPage(p => p - 1)} style={{ padding: '6px 12px', border: '1px solid #ddd', borderRadius: '4px', cursor: page <= 1 ? 'not-allowed' : 'pointer', background: page <= 1 ? '#f5f5f5' : 'white' }}>← Prev</button>
-                    <span style={{ padding: '6px 12px', fontSize: '13px', color: '#666' }}>Page {page} of {totalPages}</span>
-                    <button disabled={page >= totalPages} onClick={() => setPage(p => p + 1)} style={{ padding: '6px 12px', border: '1px solid #ddd', borderRadius: '4px', cursor: page >= totalPages ? 'not-allowed' : 'pointer', background: page >= totalPages ? '#f5f5f5' : 'white' }}>Next →</button>
-                </div>
-            )}
+            {
+                totalPages > 1 && (
+                    <div style={{ display: 'flex', justifyContent: 'center', gap: '6px', marginTop: '12px' }}>
+                        <button disabled={page <= 1} onClick={() => setPage(p => p - 1)} style={{ padding: '6px 12px', border: '1px solid #ddd', borderRadius: '4px', cursor: page <= 1 ? 'not-allowed' : 'pointer', background: page <= 1 ? '#f5f5f5' : 'white' }}>← Prev</button>
+                        <span style={{ padding: '6px 12px', fontSize: '13px', color: '#666' }}>Page {page} of {totalPages}</span>
+                        <button disabled={page >= totalPages} onClick={() => setPage(p => p + 1)} style={{ padding: '6px 12px', border: '1px solid #ddd', borderRadius: '4px', cursor: page >= totalPages ? 'not-allowed' : 'pointer', background: page >= totalPages ? '#f5f5f5' : 'white' }}>Next →</button>
+                    </div>
+                )
+            }
 
             {/* Detail Modal */}
-            {showDetailModal && selectedEntry && (
-                <div style={{ position: 'fixed', top: 0, left: 0, right: 0, bottom: 0, backgroundColor: 'rgba(0,0,0,0.5)', display: 'flex', justifyContent: 'center', alignItems: 'center', zIndex: 1000, padding: '20px' }} onClick={() => { setShowDetailModal(false); setSelectedEntry(null); }}>
-                    <div style={{ backgroundColor: 'white', borderRadius: '8px', width: '95%', maxWidth: detailMode === 'full' ? '900px' : '500px', maxHeight: '80vh', overflowY: 'auto', boxShadow: '0 8px 32px rgba(0,0,0,0.3)', marginTop: '30px' }} onClick={e => e.stopPropagation()}>
-                        {/* Header — matches LotSelection style for quick, purple for full */}
-                        <div style={{
-                            background: detailMode === 'quick'
-                                ? 'linear-gradient(135deg, #2c3e50 0%, #3498db 100%)'
-                                : 'linear-gradient(135deg, #6c3483, #8e44ad)',
-                            padding: '16px 20px', borderRadius: '8px 8px 0 0', color: 'white',
-                            display: 'flex', justifyContent: 'space-between', alignItems: 'center'
-                        }}>
-                            <div>
-                                <h3 style={{ margin: 0, fontSize: '16px', fontWeight: '700' }}>
-                                    {detailMode === 'full' ? 'Complete Entry Details' : 'Entry Details'}
-                                </h3>
-                                <p style={{ margin: '4px 0 0', fontSize: '11px', opacity: 0.9 }}>
-                                    <span style={{ color: '#ffd700', fontWeight: '600' }}>{selectedEntry.brokerName}</span> | {new Date(selectedEntry.entryDate).toLocaleDateString('en-GB')}
-                                </p>
-                            </div>
-                            <button onClick={() => { setShowDetailModal(false); setSelectedEntry(null); }} style={{ background: 'rgba(255,255,255,0.2)', border: 'none', borderRadius: '50%', width: '30px', height: '30px', cursor: 'pointer', fontSize: '16px', color: 'white', fontWeight: '700' }}>✕</button>
-                        </div>
-
-                        <div style={{ padding: '16px 20px' }}>
-                            {/* Staff Entry Details */}
-                            <h4 style={{ margin: '0 0 10px', fontSize: '13px', color: '#2c3e50', borderBottom: '2px solid #3498db', paddingBottom: '6px' }}>
-                                👤 Staff Entry Details
-                                {selectedEntry.entryType && (
-                                    <span style={{ marginLeft: '8px', fontSize: '11px', padding: '2px 8px', borderRadius: '10px', backgroundColor: selectedEntry.entryType === 'DIRECT_LOADED_VEHICLE' ? '#e8f5e9' : selectedEntry.entryType === 'LOCATION_SAMPLE' ? '#fff3e0' : '#e3f2fd', color: selectedEntry.entryType === 'DIRECT_LOADED_VEHICLE' ? '#2e7d32' : selectedEntry.entryType === 'LOCATION_SAMPLE' ? '#e65100' : '#1565c0', fontWeight: '600' }}>
+            {
+                showDetailModal && selectedEntry && (
+                    <div style={{ position: 'fixed', top: 0, left: 0, right: 0, bottom: 0, backgroundColor: 'rgba(0,0,0,0.5)', display: 'flex', justifyContent: 'center', alignItems: 'center', zIndex: 9999, padding: '20px' }} onClick={() => { setShowDetailModal(false); setSelectedEntry(null); }}>
+                        <div style={{ backgroundColor: 'white', borderRadius: '8px', width: '95%', maxWidth: detailMode === 'full' ? '900px' : '500px', maxHeight: '80vh', overflowY: 'auto', boxShadow: '0 8px 32px rgba(0,0,0,0.3)', marginTop: '30px' }} onClick={e => e.stopPropagation()}>
+                            {/* Redesigned Header — Green Background, Aligned Items */}
+                            <div style={{
+                                background: selectedEntry.entryType === 'DIRECT_LOADED_VEHICLE'
+                                    ? '#1565c0'
+                                    : selectedEntry.entryType === 'LOCATION_SAMPLE'
+                                        ? '#e67e22'
+                                        : '#4caf50',
+                                padding: '16px 20px', borderRadius: '8px 8px 0 0', color: 'white',
+                                position: 'relative'
+                            }}>
+                                <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'flex-start', marginBottom: '4px' }}>
+                                    <div style={{ fontSize: '13px', fontWeight: '800', opacity: 0.9 }}>
+                                        {new Date(selectedEntry.entryDate).toLocaleDateString('en-GB', { day: '2-digit', month: 'long', year: 'numeric' })}
+                                    </div>
+                                    <div style={{ position: 'absolute', left: '50%', transform: 'translateX(-50%)', fontSize: '22px', fontWeight: '900', letterSpacing: '1.5px', whiteSpace: 'nowrap' }}>
                                         {selectedEntry.entryType === 'DIRECT_LOADED_VEHICLE' ? 'Ready Lorry' : selectedEntry.entryType === 'LOCATION_SAMPLE' ? 'Location Sample' : 'Mill Sample'}
-                                    </span>
+                                    </div>
+                                </div>
+                                <div style={{
+                                    fontSize: '24px', fontWeight: '900', letterSpacing: '0.5px', marginTop: '2px',
+                                    whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis', maxWidth: '85%'
+                                }}>
+                                    {toTitleCase(selectedEntry.brokerName) || '-'}
+                                </div>
+                                <button onClick={() => { setShowDetailModal(false); setSelectedEntry(null); }} style={{
+                                    position: 'absolute', top: '16px', right: '16px',
+                                    background: 'rgba(255,255,255,0.2)', border: 'none', borderRadius: '50%',
+                                    width: '36px', height: '36px', cursor: 'pointer', fontSize: '18px',
+                                    color: 'white', fontWeight: '900', display: 'flex', alignItems: 'center',
+                                    justifyContent: 'center', transition: 'all 0.2s',
+                                    boxShadow: '0 2px 8px rgba(0,0,0,0.2)'
+                                }}>✕</button>
+                            </div>
+
+                            <div style={{ padding: '16px 20px' }}>
+                                {/* Entry Details — Date, Bags, Pack, Variety, Party, Location, Lorry, Sample Collected By */}
+                                <div style={{ display: 'grid', gridTemplateColumns: 'repeat(4, 1fr)', gap: '8px', marginBottom: '8px' }}>
+                                    <DetailItem label="Date" value={new Date(selectedEntry.entryDate).toLocaleDateString('en-IN', { day: '2-digit', month: 'short', year: 'numeric' })} />
+                                    <DetailItem label="Bags" value={String(selectedEntry.bags)} />
+                                    <DetailItem label="Packaging" value={`${selectedEntry.packaging || '75'} Kg`} />
+                                    <DetailItem label="Variety" value={selectedEntry.variety} />
+                                </div>
+                                <div style={{ display: 'grid', gridTemplateColumns: 'repeat(4, 1fr)', gap: '8px', marginBottom: '0px' }}>
+                                    <DetailItem label="Party Name" value={selectedEntry.partyName || '-'} />
+                                    <DetailItem label="Paddy Location" value={selectedEntry.location || '-'} />
+                                    <DetailItem label="Lorry Number" value={(selectedEntry as any).lorryNumber || '-'} />
+                                    <DetailItem label="Sample Collected By" value={(selectedEntry as any).sampleCollectedBy || '-'} />
+                                </div>
+
+                                {/* Quality Parameters — grouped rows, hide 0 values */}
+                                <h4 style={{ margin: '0 0 10px', fontSize: '13px', color: '#e67e22', borderBottom: '2px solid #e67e22', paddingBottom: '6px' }}>
+                                    🔬 Quality Parameters
+                                </h4>
+                                {selectedEntry.qualityParameters ? (() => {
+                                    const qp = selectedEntry.qualityParameters;
+                                    const fmt = (v: any, forceDecimal = false, precision = 2) => {
+                                        if (v == null || v === '') return null;
+                                        const n = Number(v);
+                                        if (isNaN(n) || n === 0) return null;
+                                        if (forceDecimal) return n.toFixed(1);
+                                        if (precision > 2) return String(parseFloat(n.toFixed(precision)));
+                                        return n % 1 === 0 ? String(Math.round(n)) : String(parseFloat(n.toFixed(2)));
+                                    };
+                                    const fmtB = (v: any, useBrackets = false) => {
+                                        const f = fmt(v);
+                                        return f && useBrackets ? `(${f})` : f;
+                                    };
+                                    // Row 1: Moisture, Cutting, Bend, Grains Count
+                                    const row1: { label: string; value: React.ReactNode }[] = [];
+                                    if (fmt(qp.moisture)) {
+                                        const dryVal = fmt((qp as any).dryMoisture, false, 3);
+                                        row1.push({
+                                            label: 'Moisture',
+                                            value: dryVal ? (
+                                                <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '1px' }}>
+                                                    <span style={{ color: '#e67e22', fontWeight: '800', fontSize: '11px' }}>{dryVal}%</span>
+                                                    <span>{fmt(qp.moisture, false, 3)}%</span>
+                                                </div>
+                                            ) : `${fmt(qp.moisture, false, 3)}%`
+                                        });
+                                    }
+                                    if (qp.cutting1 && qp.cutting2 && (Number(qp.cutting1) !== 0 || Number(qp.cutting2) !== 0)) row1.push({ label: 'Cutting', value: `${fmt(qp.cutting1) || '0'}×${fmt(qp.cutting2) || '0'}` });
+                                    if (qp.bend1 && qp.bend2 && (Number(qp.bend1) !== 0 || Number(qp.bend2) !== 0)) row1.push({ label: 'Bend', value: `${fmt(qp.bend1) || '0'}×${fmt(qp.bend2) || '0'}` });
+                                    if (fmtB(qp.grainsCount, true)) row1.push({ label: 'Grains Count', value: fmtB(qp.grainsCount, true)! });
+                                    // Row 2: Mix, S Mix, L Mix, Oil
+                                    const row2: { label: string; value: React.ReactNode }[] = [];
+                                    if (fmt(qp.mix)) row2.push({ label: 'Mix', value: fmtB(qp.mix)! });
+                                    if (fmt(qp.mixS)) row2.push({ label: 'S Mix', value: fmtB(qp.mixS)! });
+                                    if (fmt(qp.mixL)) row2.push({ label: 'L Mix', value: fmtB(qp.mixL)! });
+                                    if (fmt(qp.oil)) row2.push({ label: 'Oil', value: fmtB(qp.oil)! });
+                                    // Row 3: SK, Kandu, WB (R+BK+T combined)
+                                    const row3: { label: string; value: React.ReactNode }[] = [];
+                                    if (fmt(qp.sk)) row3.push({ label: 'SK', value: fmtB(qp.sk)! });
+                                    if (fmt(qp.kandu)) row3.push({ label: 'Kandu', value: fmtB(qp.kandu)! });
+                                    // Combine WB R, BK, T into one value
+                                    const wbParts: string[] = [];
+                                    if (fmt(qp.wbR)) wbParts.push(`R:${fmt(qp.wbR)}`);
+                                    if (fmt(qp.wbBk)) wbParts.push(`BK:${fmt(qp.wbBk)}`);
+                                    if (fmt(qp.wbT)) wbParts.push(`T:${fmt(qp.wbT)}`);
+                                    if (wbParts.length > 0) row3.push({ label: 'WB (R/BK/T)', value: wbParts.join(' | ') });
+                                    const hasPaddyWb = fmt(qp.paddyWb);
+                                    return (
+                                        <div>
+                                            {row1.length > 0 && (
+                                                <div style={{ display: 'grid', gridTemplateColumns: 'repeat(4, 1fr)', gap: '8px', marginBottom: '8px' }}>
+                                                    {row1.map(item => <DetailItem key={item.label} label={item.label} value={item.value} />)}
+                                                </div>
+                                            )}
+                                            {row2.length > 0 && (
+                                                <div style={{ display: 'grid', gridTemplateColumns: 'repeat(4, 1fr)', gap: '8px', marginBottom: '8px' }}>
+                                                    {row2.map(item => <DetailItem key={item.label} label={item.label} value={item.value} />)}
+                                                </div>
+                                            )}
+                                            {row3.length > 0 && (
+                                                <div style={{ display: 'grid', gridTemplateColumns: 'repeat(4, 1fr)', gap: '8px', marginBottom: '8px' }}>
+                                                    {row3.map(item => <DetailItem key={item.label} label={item.label} value={item.value} />)}
+                                                </div>
+                                            )}
+                                            {hasPaddyWb && (
+                                                <div style={{
+                                                    marginTop: '10px',
+                                                    background: Number(qp.paddyWb) < 50 ? '#fff5f5' : (Number(qp.paddyWb) <= 50.5 ? '#fff9f0' : '#e8f5e9'),
+                                                    padding: '8px 10px',
+                                                    borderRadius: '6px',
+                                                    border: `1px solid ${Number(qp.paddyWb) < 50 ? '#feb2b2' : (Number(qp.paddyWb) <= 50.5 ? '#fbd38d' : '#c8e6c9')}`,
+                                                    textAlign: 'center',
+                                                    marginBottom: '8px',
+                                                    maxWidth: '130px',
+                                                    margin: '10px auto 8px'
+                                                }}>
+                                                    <div style={{ fontSize: '10px', color: Number(qp.paddyWb) < 50 ? '#c53030' : (Number(qp.paddyWb) <= 50.5 ? '#9c4221' : '#2e7d32'), marginBottom: '2px', fontWeight: '600' }}>Paddy WB</div>
+                                                    <div style={{ fontSize: '13px', fontWeight: '800', color: Number(qp.paddyWb) < 50 ? '#d32f2f' : (Number(qp.paddyWb) <= 50.5 ? '#f39c12' : '#1b5e20') }}>{fmtB(qp.paddyWb)}</div>
+                                                </div>
+                                            )}
+                                            {qp.reportedBy && (
+                                                <div style={{ display: 'grid', gridTemplateColumns: 'repeat(4, 1fr)', gap: '8px', marginTop: '8px' }}>
+                                                    <div style={{ background: '#f8f9fa', padding: '8px 10px', borderRadius: '6px', border: '1px solid #e0e0e0' }}>
+                                                        <div style={{ fontSize: '10px', color: '#666', marginBottom: '2px', fontWeight: '600' }}>Sample Collected By</div>
+                                                        <div style={{ fontSize: '13px', fontWeight: '700', color: '#2c3e50' }}>{qp.reportedBy}</div>
+                                                    </div>
+                                                </div>
+                                            )}
+                                        </div>
+                                    );
+                                })() : (
+                                    <p style={{ color: '#999', fontSize: '13px', fontStyle: 'italic' }}>Quality parameters not added yet</p>
                                 )}
-                            </h4>
-                            <div style={{ display: 'grid', gridTemplateColumns: 'repeat(4, 1fr)', gap: '8px', marginBottom: '8px' }}>
-                                <DetailItem label="Date" value={new Date(selectedEntry.entryDate).toLocaleDateString('en-IN', { day: '2-digit', month: 'short', year: 'numeric' })} />
-                                <DetailItem label="Bags" value={String(selectedEntry.bags)} />
-                                <DetailItem label="Packaging" value={`${selectedEntry.packaging || '75'} Kg`} />
-                                <DetailItem label="Party Name" value={selectedEntry.partyName || '-'} />
-                            </div>
-                            <div style={{ display: 'grid', gridTemplateColumns: 'repeat(4, 1fr)', gap: '8px', marginBottom: '16px' }}>
-                                <DetailItem label="Paddy Location" value={selectedEntry.location || '-'} />
-                                <DetailItem label="Lorry Number" value={(selectedEntry as any).lorryNumber || '-'} />
-                                <DetailItem label="Variety" value={selectedEntry.variety} />
-                            </div>
 
-                            {/* Quality Parameters */}
-                            <h4 style={{ margin: '0 0 10px', fontSize: '13px', color: '#e67e22', borderBottom: '2px solid #e67e22', paddingBottom: '6px' }}>
-                                🔬 Quality Parameters {selectedEntry.qualityParameters?.reportedBy && <span style={{ fontSize: '11px', color: '#666', fontWeight: '400' }}> — Reported by: {selectedEntry.qualityParameters.reportedBy}</span>}
-                            </h4>
-                            {selectedEntry.qualityParameters ? (() => {
-                                const qp = selectedEntry.qualityParameters;
-                                const fmt = (v: any) => {
-                                    if (v == null || v === '') return '-';
-                                    const n = Number(v);
-                                    if (isNaN(n)) return String(v);
-                                    return n % 1 === 0 ? String(Math.round(n)) : n.toFixed(2);
-                                };
-                                return (
-                                    <div>
-                                        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(4, 1fr)', gap: '8px', marginBottom: '8px' }}>
-                                            <DetailItem label="Moisture" value={`${fmt(qp.moisture)}%`} />
-                                            <DetailItem label="Cutting" value={qp.cutting1 && qp.cutting2 ? `${fmt(qp.cutting1)}×${fmt(qp.cutting2)}` : '-'} />
-                                            <DetailItem label="Bend" value={fmt(qp.bend)} />
-                                            <DetailItem label="Grains Count" value={fmt(qp.grainsCount)} />
+                                {/* Full mode: Cooking, Final Rate, Workflow */}
+                                {detailMode === 'full' && (
+                                    <>
+                                        {/* Cooking Report */}
+                                        <div style={{ marginTop: '16px' }}>
+                                            <h4 style={{ margin: '0 0 10px', fontSize: '13px', color: '#e65100', borderBottom: '2px solid #e65100', paddingBottom: '6px' }}>🍚 Cooking Report</h4>
+                                            {selectedEntry.cookingReport ? (
+                                                <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: '8px' }}>
+                                                    <DetailItem label="Status" value={selectedEntry.cookingReport.status === 'MEDIUM' ? 'PASS' : (selectedEntry.cookingReport.status || '-')} />
+                                                    <DetailItem label="Cooking Result" value={selectedEntry.cookingReport.cookingResult || '-'} />
+                                                    <DetailItem label="Recheck Count" value={selectedEntry.cookingReport.recheckCount ? String(selectedEntry.cookingReport.recheckCount) : '-'} />
+                                                </div>
+                                            ) : (
+                                                <p style={{ color: '#999', fontSize: '12px', fontStyle: 'italic' }}>Not added yet</p>
+                                            )}
                                         </div>
-                                        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(4, 1fr)', gap: '8px', marginBottom: '8px' }}>
-                                            <DetailItem label="Mix" value={fmt(qp.mix)} />
-                                            <DetailItem label="S Mix" value={fmt(qp.mixS)} />
-                                            <DetailItem label="L Mix" value={fmt(qp.mixL)} />
-                                            <DetailItem label="Kandu" value={fmt(qp.kandu)} />
-                                        </div>
-                                        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(4, 1fr)', gap: '8px', marginBottom: '8px' }}>
-                                            <DetailItem label="Oil" value={fmt(qp.oil)} />
-                                            <DetailItem label="SK" value={fmt(qp.sk)} />
-                                            <DetailItem label="WB (R)" value={fmt(qp.wbR)} />
-                                            <DetailItem label="WB (BK)" value={fmt(qp.wbBk)} />
-                                        </div>
-                                        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(4, 1fr)', gap: '8px' }}>
-                                            <DetailItem label="WB (T)" value={fmt(qp.wbT)} />
-                                            <DetailItem label="Paddy WB" value={fmt(qp.paddyWb)} />
-                                        </div>
-                                    </div>
-                                );
-                            })() : (
-                                <p style={{ color: '#999', fontSize: '13px', fontStyle: 'italic' }}>Quality parameters not added yet</p>
-                            )}
 
-                            {/* Full mode: Cooking, Final Rate, Workflow */}
-                            {detailMode === 'full' && (
-                                <>
-                                    {/* Cooking Report */}
-                                    <div style={{ marginTop: '16px' }}>
-                                        <h4 style={{ margin: '0 0 10px', fontSize: '13px', color: '#e65100', borderBottom: '2px solid #e65100', paddingBottom: '6px' }}>🍚 Cooking Report</h4>
-                                        {selectedEntry.cookingReport ? (
-                                            <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: '8px' }}>
-                                                <DetailItem label="Status" value={selectedEntry.cookingReport.status === 'MEDIUM' ? 'PASS' : (selectedEntry.cookingReport.status || '-')} />
-                                                <DetailItem label="Cooking Result" value={selectedEntry.cookingReport.cookingResult || '-'} />
-                                                <DetailItem label="Recheck Count" value={selectedEntry.cookingReport.recheckCount ? String(selectedEntry.cookingReport.recheckCount) : '-'} />
-                                            </div>
-                                        ) : (
-                                            <p style={{ color: '#999', fontSize: '12px', fontStyle: 'italic' }}>Not added yet</p>
-                                        )}
-                                    </div>
-
-                                    {/* Final Rate */}
-                                    <div style={{ marginTop: '16px' }}>
-                                        <h4 style={{ margin: '0 0 10px', fontSize: '13px', color: '#0d47a1', borderBottom: '2px solid #0d47a1', paddingBottom: '6px' }}>💰 Final Rate</h4>
-                                        {selectedEntry.offering ? (
-                                            <div>
-                                                <div style={{ background: '#e3f2fd', padding: '8px 12px', borderRadius: '6px', marginBottom: '6px' }}>
-                                                    <span style={{ fontSize: '11px', color: '#666', fontWeight: '600' }}>RATE: </span>
-                                                    <span style={{ fontSize: '15px', fontWeight: '800', color: '#1565c0' }}>
-                                                        {selectedEntry.offering.finalPrice ? `₹${selectedEntry.offering.finalPrice}` : selectedEntry.offering.finalBaseRate ? `₹${selectedEntry.offering.finalBaseRate}` : selectedEntry.offering.offerBaseRateValue ? `₹${selectedEntry.offering.offerBaseRateValue}` : 'Not set'}
-                                                    </span>
-                                                    {selectedEntry.offering.baseRateType && (
-                                                        <span style={{ fontSize: '11px', color: '#555', marginLeft: '6px' }}>
-                                                            {selectedEntry.offering.baseRateType.replace(/_/g, '/')} | {selectedEntry.offering.baseRateUnit === 'per_quintal' ? 'Per Quintal' : selectedEntry.offering.baseRateUnit === 'per_ton' ? 'Per Ton' : 'Per Bag'}
+                                        {/* Final Rate */}
+                                        <div style={{ marginTop: '16px' }}>
+                                            <h4 style={{ margin: '0 0 10px', fontSize: '13px', color: '#0d47a1', borderBottom: '2px solid #0d47a1', paddingBottom: '6px' }}>💰 Final Rate</h4>
+                                            {selectedEntry.offering ? (
+                                                <div>
+                                                    <div style={{ background: '#e3f2fd', padding: '8px 12px', borderRadius: '6px', marginBottom: '6px' }}>
+                                                        <span style={{ fontSize: '11px', color: '#666', fontWeight: '600' }}>RATE: </span>
+                                                        <span style={{ fontSize: '15px', fontWeight: '800', color: '#1565c0' }}>
+                                                            {selectedEntry.offering.finalPrice ? `₹${selectedEntry.offering.finalPrice}` : selectedEntry.offering.finalBaseRate ? `₹${selectedEntry.offering.finalBaseRate}` : selectedEntry.offering.offerBaseRateValue ? `₹${selectedEntry.offering.offerBaseRateValue}` : 'Not set'}
                                                         </span>
-                                                    )}
+                                                        {selectedEntry.offering.baseRateType && (
+                                                            <span style={{ fontSize: '11px', color: '#555', marginLeft: '6px' }}>
+                                                                {selectedEntry.offering.baseRateType.replace(/_/g, '/')} | {selectedEntry.offering.baseRateUnit === 'per_quintal' ? 'Per Quintal' : selectedEntry.offering.baseRateUnit === 'per_ton' ? 'Per Ton' : 'Per Bag'}
+                                                            </span>
+                                                        )}
+                                                    </div>
+                                                    <div style={{ display: 'grid', gridTemplateColumns: 'repeat(4, 1fr)', gap: '6px' }}>
+                                                        {(selectedEntry.offering.finalSute || selectedEntry.offering.sute) && (
+                                                            <DetailItem label="Sute" value={`${selectedEntry.offering.finalSute || selectedEntry.offering.sute} ${(selectedEntry.offering.finalSuteUnit || selectedEntry.offering.suteUnit) === 'per_ton' ? '/Ton' : (selectedEntry.offering.finalSuteUnit || selectedEntry.offering.suteUnit) === 'per_quintal' ? '/Qtl' : '/Bag'}`} />
+                                                        )}
+                                                        <DetailItem label="Hamali" value={selectedEntry.offering.hamali ? `${selectedEntry.offering.hamali} ${selectedEntry.offering.hamaliUnit === 'per_quintal' ? '/Qtl' : '/Bag'}` : '-'} />
+                                                        <DetailItem label="Brokerage" value={selectedEntry.offering.brokerage ? `${selectedEntry.offering.brokerage} ${selectedEntry.offering.brokerageUnit === 'per_quintal' ? '/Qtl' : '/Bag'}` : '-'} />
+                                                        <DetailItem label="LF" value={selectedEntry.offering.lf ? `${selectedEntry.offering.lf} ${selectedEntry.offering.lfUnit === 'per_quintal' ? '/Qtl' : '/Bag'}` : '-'} />
+                                                        <DetailItem label="EGB" value={selectedEntry.offering.egbType === 'purchase' ? `${selectedEntry.offering.egbValue || '-'} (Purchase)` : (selectedEntry.offering.baseRateType || '').includes('LOOSE') ? '0 (Mill)' : '-'} />
+                                                        <DetailItem label="Finalized" value={selectedEntry.offering.isFinalized ? '✅ Yes' : '❌ No'} />
+                                                    </div>
                                                 </div>
-                                                <div style={{ display: 'grid', gridTemplateColumns: 'repeat(4, 1fr)', gap: '6px' }}>
-                                                    {(selectedEntry.offering.finalSute || selectedEntry.offering.sute) && (
-                                                        <DetailItem label="Sute" value={`${selectedEntry.offering.finalSute || selectedEntry.offering.sute} ${(selectedEntry.offering.finalSuteUnit || selectedEntry.offering.suteUnit) === 'per_ton' ? '/Ton' : (selectedEntry.offering.finalSuteUnit || selectedEntry.offering.suteUnit) === 'per_quintal' ? '/Qtl' : '/Bag'}`} />
-                                                    )}
-                                                    <DetailItem label="Hamali" value={selectedEntry.offering.hamali ? `${selectedEntry.offering.hamali} ${selectedEntry.offering.hamaliUnit === 'per_quintal' ? '/Qtl' : '/Bag'}` : '-'} />
-                                                    <DetailItem label="Brokerage" value={selectedEntry.offering.brokerage ? `${selectedEntry.offering.brokerage} ${selectedEntry.offering.brokerageUnit === 'per_quintal' ? '/Qtl' : '/Bag'}` : '-'} />
-                                                    <DetailItem label="LF" value={selectedEntry.offering.lf ? `${selectedEntry.offering.lf} ${selectedEntry.offering.lfUnit === 'per_quintal' ? '/Qtl' : '/Bag'}` : '-'} />
-                                                    <DetailItem label="EGB" value={selectedEntry.offering.egbType === 'purchase' ? `${selectedEntry.offering.egbValue || '-'} (Purchase)` : (selectedEntry.offering.baseRateType || '').includes('LOOSE') ? '0 (Mill)' : '-'} />
-                                                    <DetailItem label="Finalized" value={selectedEntry.offering.isFinalized ? '✅ Yes' : '❌ No'} />
-                                                </div>
-                                            </div>
-                                        ) : (
-                                            <p style={{ color: '#999', fontSize: '12px', fontStyle: 'italic' }}>Not added yet</p>
-                                        )}
-                                    </div>
-
-                                    {/* Workflow Status */}
-                                    <div style={{ marginTop: '16px' }}>
-                                        <h4 style={{ margin: '0 0 10px', fontSize: '13px', color: '#c62828', borderBottom: '2px solid #c62828', paddingBottom: '6px' }}>📊 Workflow Status</h4>
-                                        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: '8px' }}>
-                                            <DetailItem label="Current Status" value={selectedEntry.workflowStatus.replace(/_/g, ' ').toLowerCase().replace(/\b\w/g, (c: string) => c.toUpperCase())} />
-                                            <DetailItem label="Lot Decision" value={selectedEntry.lotSelectionDecision?.replace(/_/g, ' ') || '-'} />
-                                            <DetailItem label="Supervisor" value={(selectedEntry as any).supervisorName || '-'} />
+                                            ) : (
+                                                <p style={{ color: '#999', fontSize: '12px', fontStyle: 'italic' }}>Not added yet</p>
+                                            )}
                                         </div>
-                                    </div>
-                                </>
-                            )}
 
-                            {/* Close button at bottom */}
-                            <button onClick={() => { setShowDetailModal(false); setSelectedEntry(null); }}
-                                style={{ marginTop: '16px', width: '100%', padding: '8px', backgroundColor: '#e74c3c', color: 'white', border: 'none', borderRadius: '4px', fontSize: '13px', fontWeight: '600', cursor: 'pointer' }}>
-                                Close
-                            </button>
+                                        {/* Workflow Status */}
+                                        <div style={{ marginTop: '16px' }}>
+                                            <h4 style={{ margin: '0 0 10px', fontSize: '13px', color: '#c62828', borderBottom: '2px solid #c62828', paddingBottom: '6px' }}>📊 Workflow Status</h4>
+                                            <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: '8px' }}>
+                                                <DetailItem label="Current Status" value={selectedEntry.workflowStatus.replace(/_/g, ' ').toLowerCase().replace(/\b\w/g, (c: string) => c.toUpperCase())} />
+                                                <DetailItem label="Lot Decision" value={selectedEntry.lotSelectionDecision?.replace(/_/g, ' ') || '-'} />
+                                                <DetailItem label="Supervisor" value={(selectedEntry as any).supervisorName || '-'} />
+                                            </div>
+                                        </div>
+                                    </>
+                                )}
+
+                                {/* Close button at bottom */}
+                                <button onClick={() => { setShowDetailModal(false); setSelectedEntry(null); }}
+                                    style={{ marginTop: '16px', width: '100%', padding: '8px', backgroundColor: '#e74c3c', color: 'white', border: 'none', borderRadius: '4px', fontSize: '13px', fontWeight: '600', cursor: 'pointer' }}>
+                                    Close
+                                </button>
+                            </div>
                         </div>
                     </div>
-                </div>
-            )}
-        </div>
+                )
+            }
+        </div >
     );
 };
 

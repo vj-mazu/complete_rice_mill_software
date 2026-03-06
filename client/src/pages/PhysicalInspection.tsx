@@ -17,7 +17,11 @@ interface SampleEntry {
   offeringPrice?: number;
   priceType?: string;
   finalPrice?: number;
+  entryType?: string;
+  lorryNumber?: string;
 }
+
+const toTitleCase = (str: string) => str ? str.replace(/\b\w/g, c => c.toUpperCase()) : '';
 
 interface PreviousInspection {
   id: string;
@@ -339,7 +343,7 @@ const PhysicalInspection: React.FC = () => {
                             padding: '0 10px',
                             fontWeight: '600'
                           }}>
-                            📦 New Lot: {entry.partyName} - {entry.variety} ({entry.bags} bags)
+                            📦 New Lot: {toTitleCase(entry.partyName) || entry.lorryNumber?.toUpperCase()} - {entry.variety} ({entry.bags?.toLocaleString('en-IN')} bags)
                           </div>
                         </td>
                       </tr>
@@ -350,16 +354,19 @@ const PhysicalInspection: React.FC = () => {
                       </td>
                       <td style={{ border: '1px solid #ddd', padding: '6px', fontSize: '11px', textAlign: 'left' }}>{entry.brokerName}</td>
                       <td style={{ border: '1px solid #ddd', padding: '6px', fontSize: '11px', textAlign: 'left' }}>{entry.variety}</td>
-                      <td style={{ border: '1px solid #ddd', padding: '6px', fontSize: '11px', textAlign: 'left' }}>{entry.partyName}</td>
+                      <td style={{ border: '1px solid #ddd', padding: '6px', fontSize: '11px', textAlign: 'left' }}>
+                        <div style={{ fontWeight: '600', color: '#1565c0' }}>{toTitleCase(entry.partyName) || (entry.entryType === 'DIRECT_LOADED_VEHICLE' ? entry.lorryNumber?.toUpperCase() : '')}</div>
+                        {entry.entryType === 'DIRECT_LOADED_VEHICLE' && entry.lorryNumber && entry.partyName && <div style={{ fontSize: '10px', color: '#1565c0', fontWeight: '600' }}>{entry.lorryNumber.toUpperCase()}</div>}
+                      </td>
                       <td style={{ border: '1px solid #ddd', padding: '6px', fontSize: '11px', textAlign: 'left' }}>{entry.location}</td>
                       <td style={{ border: '1px solid #ddd', padding: '6px', textAlign: 'right', fontSize: '11px', fontWeight: '600' }}>
-                        {progress?.totalBags || entry.bags}
+                        {progress?.totalBags?.toLocaleString('en-IN') || entry.bags?.toLocaleString('en-IN')}
                       </td>
                       <td style={{ border: '1px solid #ddd', padding: '6px', textAlign: 'right', fontSize: '11px', color: '#4CAF50', fontWeight: '600' }}>
                         {progress?.inspectedBags || 0}
                       </td>
                       <td style={{ border: '1px solid #ddd', padding: '6px', textAlign: 'right', fontSize: '11px', color: '#FF9800', fontWeight: '600' }}>
-                        {progress?.remainingBags || entry.bags}
+                        {progress?.remainingBags?.toLocaleString('en-IN') || entry.bags?.toLocaleString('en-IN')}
                       </td>
                       <td style={{ border: '1px solid #ddd', padding: '6px', textAlign: 'center' }}>
                         <div style={{ display: 'flex', alignItems: 'center', gap: '5px' }}>
@@ -427,7 +434,7 @@ const PhysicalInspection: React.FC = () => {
                                   </td>
                                   <td style={{ border: '1px solid #ddd', padding: '4px' }}>{inspection.lorryNumber}</td>
                                   <td style={{ border: '1px solid #ddd', padding: '4px', textAlign: 'right', fontWeight: '600' }}>
-                                    {inspection.bags}
+                                    {inspection.bags?.toLocaleString('en-IN')}
                                   </td>
                                   <td style={{ border: '1px solid #ddd', padding: '4px', textAlign: 'center' }}>{inspection.cutting1} x {inspection.cutting2}</td>
                                   <td style={{ border: '1px solid #ddd', padding: '4px', textAlign: 'right' }}>{inspection.bend2 ? `${Number(inspection.bend).toFixed(2)} x ${Number(inspection.bend2).toFixed(2)}` : Number(inspection.bend).toFixed(2)}</td>

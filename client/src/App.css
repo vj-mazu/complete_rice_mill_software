@@ -15,7 +15,7 @@ html {
 
 body {
   font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
-  background: linear-gradient(135deg, #f59e0b 0%, #d97706 100%);
+  background: #f5f5f5;
   min-height: 100vh;
   color: #333;
   -webkit-font-smoothing: antialiased;
@@ -33,6 +33,7 @@ body {
     opacity: 0;
     transform: translateY(30px);
   }
+
   to {
     opacity: 1;
     transform: translateY(0);
@@ -44,6 +45,7 @@ body {
     opacity: 0;
     transform: translateX(-30px);
   }
+
   to {
     opacity: 1;
     transform: translateX(0);
@@ -54,6 +56,7 @@ body {
   from {
     opacity: 0;
   }
+
   to {
     opacity: 1;
   }
@@ -63,9 +66,11 @@ body {
   0% {
     transform: scale(1);
   }
+
   50% {
     transform: scale(1.05);
   }
+
   100% {
     transform: scale(1);
   }
@@ -314,8 +319,13 @@ body {
 }
 
 @keyframes spin {
-  0% { transform: rotate(0deg); }
-  100% { transform: rotate(360deg); }
+  0% {
+    transform: rotate(0deg);
+  }
+
+  100% {
+    transform: rotate(360deg);
+  }
 }
 
 /* Pagination */
@@ -381,7 +391,8 @@ body {
   .form-input,
   .form-select {
     padding: 0.625rem 0.75rem;
-    font-size: 16px; /* Prevents iOS zoom on focus */
+    font-size: 16px;
+    /* Prevents iOS zoom on focus */
   }
 
   /* Buttons: Full width on mobile */
@@ -402,7 +413,8 @@ body {
   }
 
   .table {
-    min-width: 600px; /* Force horizontal scroll for data-heavy tables */
+    min-width: 600px;
+    /* Force horizontal scroll for data-heavy tables */
     font-size: 0.8rem;
   }
 
@@ -419,7 +431,7 @@ body {
     left: 0;
     background: white;
     z-index: 1;
-    box-shadow: 2px 0 4px rgba(0,0,0,0.06);
+    box-shadow: 2px 0 4px rgba(0, 0, 0, 0.06);
   }
 
   .table th:first-child {
@@ -459,7 +471,7 @@ body {
   [style*="grid-template-columns"] {
     grid-template-columns: 1fr !important;
   }
-  
+
   /* Flex wrapping for filter bars */
   [style*="display: flex"][style*="gap"] {
     flex-wrap: wrap;
@@ -515,12 +527,18 @@ body {
 
 /* Print friendly */
 @media print {
-  .btn, .pagination, nav, .sidebar {
+
+  .btn,
+  .pagination,
+  nav,
+  .sidebar {
     display: none !important;
   }
+
   .table {
     font-size: 0.75rem;
   }
+
   .card {
     box-shadow: none;
     border: 1px solid #ddd;
@@ -533,28 +551,28 @@ body {
     background: #1f2937;
     color: #f9fafb;
   }
-  
+
   .card-header {
     background: #374151;
     border-bottom-color: #4b5563;
   }
-  
+
   .table {
     background: #1f2937;
     color: #f9fafb;
   }
-  
+
   .table th {
     background: #374151;
     color: #f9fafb;
     border-bottom-color: #4b5563;
   }
-  
+
   .table td {
     border-bottom-color: #4b5563;
     color: #d1d5db;
   }
-  
+
   .table tr:hover {
     background: #374151;
   }

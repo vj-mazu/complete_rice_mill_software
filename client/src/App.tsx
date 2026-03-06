@@ -37,6 +37,7 @@ const FinalReviewPage = React.lazy(() => import('./pages/FinalReviewPage'));
 const SampleWorkflow = React.lazy(() => import('./pages/SampleWorkflow'));
 const ManagerSampleReports = React.lazy(() => import('./pages/ManagerSampleReports'));
 const EGBLedger = React.lazy(() => import('./pages/EGBLedger'));
+const CookingReportPage = React.lazy(() => import('./pages/CookingReport'));
 
 // Lightweight loading spinner for page transitions
 const PageLoader = () => (
@@ -234,6 +235,16 @@ const AppContent: React.FC = () => {
                   <ProtectedRoute roles={['physical_supervisor']}>
                     <Layout>
                       <PhysicalInspection />
+                    </Layout>
+                  </ProtectedRoute>
+                }
+              />
+              <Route
+                path="/cooking-book"
+                element={
+                  <ProtectedRoute roles={['staff', 'manager', 'admin']}>
+                    <Layout>
+                      <CookingReportPage />
                     </Layout>
                   </ProtectedRoute>
                 }

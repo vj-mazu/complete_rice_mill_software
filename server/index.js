@@ -1392,6 +1392,70 @@ const startServer = async () => {
         console.log('⚠️ Migration 60 warning:', error.message);
       }
 
+      // Migration 99: Add dryMoisture to quality_parameters and qualityName to users
+      try {
+        const addDryMoistureAndQuality = require('./migrations/99_add_dry_moisture_and_quality_columns');
+        await addDryMoistureAndQuality();
+        console.log('✅ Migration 99: dryMoisture and qualityName columns added');
+      } catch (error) {
+        console.log('⚠️ Migration 99 warning:', error.message);
+      }
+
+      // Migration 96b: Add bend2 column to physical_inspections table
+      try {
+        const addBend2ToPhysicalInspections = require('./migrations/96_add_bend2_to_physical_inspections');
+        const queryInterface = sequelize.getQueryInterface();
+        await addBend2ToPhysicalInspections.up(queryInterface, sequelize.Sequelize);
+        console.log('✅ Migration 96b: bend2 column added to physical_inspections');
+      } catch (error) {
+        console.log('⚠️ Migration 96b warning:', error.message);
+      }
+
+      // Migration 100: Add cooking_done_by column to cooking_reports
+      try {
+        const addCookingDoneBy = require('./migrations/100_add_cooking_done_by');
+        await addCookingDoneBy.up();
+        console.log('✅ Migration 100: cooking_done_by column added to cooking_reports');
+      } catch (error) {
+        console.log('⚠️ Migration 100 warning:', error.message);
+      }
+
+      // Migration 101: Allow NULL status in cooking_reports
+      try {
+        const allowNullStatus = require('./migrations/101_allow_null_status');
+        await allowNullStatus.up();
+        console.log('✅ Migration 101: status column now allows NULL in cooking_reports');
+      } catch (error) {
+        console.log('⚠️ Migration 101 warning:', error.message);
+      }
+
+      // Migration 102: Add cooking_approved_by
+      try {
+        const addCookingApprovedBy = require('./migrations/102_add_cooking_approved_by');
+        await addCookingApprovedBy.up(sequelize.getQueryInterface(), sequelize.Sequelize);
+        console.log('✅ Migration 102: cooking_approved_by column added');
+      } catch (error) {
+        console.log('⚠️ Migration 102 warning:', error.message);
+      }
+
+      // Migration 103: Add performance indexes for cooking reports
+      try {
+        const addCookingIndexes = require('./migrations/103_add_cooking_indexes');
+        await addCookingIndexes.up(sequelize.getQueryInterface(), sequelize.Sequelize);
+        console.log('✅ Migration 103: cooking search indexes added');
+      } catch (error) {
+        console.log('⚠️ Migration 103 warning:', error.message);
+      }
+
+      // Migration 104: Add RICE_SAMPLE to entry_type ENUM
+      try {
+        const addRiceSampleType = require('./migrations/104_add_rice_sample_type');
+        await addRiceSampleType.up(sequelize.getQueryInterface(), sequelize.Sequelize);
+        console.log('✅ Migration 104: RICE_SAMPLE added to entry_type enum');
+      } catch (error) {
+        console.log('⚠️ Migration 104 warning:', error.message);
+      }
+
       console.log('✅ All migrations + indexes completed.');
     }
 

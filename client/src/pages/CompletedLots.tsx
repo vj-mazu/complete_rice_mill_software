@@ -14,7 +14,14 @@ interface SampleEntry {
     qualityParameters?: any;
     offering?: any;
     creator?: { username: string };
+    entryType?: string;
+    lorryNumber?: string;
 }
+
+const toTitleCase = (str: string) => {
+    if (!str) return '';
+    return str.replace(/\w\S*/g, (txt) => txt.charAt(0).toUpperCase() + txt.substr(1).toLowerCase());
+};
 
 const CompletedLots: React.FC = () => {
     const [entries, setEntries] = useState<SampleEntry[]>([]);
@@ -95,10 +102,13 @@ const CompletedLots: React.FC = () => {
                                 <td style={{ padding: '8px' }}>{new Date(e.entryDate).toLocaleDateString('en-IN')}</td>
                                 <td style={{ padding: '8px', fontWeight: '600' }}>{(i + 1 + (page - 1) * pageSize)}</td>
                                 <td style={{ padding: '8px' }}>{e.brokerName}</td>
-                                <td style={{ padding: '8px' }}>{e.bags}</td>
+                                <td style={{ padding: '8px' }}>{e.bags?.toLocaleString('en-IN')}</td>
                                 <td style={{ padding: '8px' }}>{e.packaging || '75'}</td>
                                 <td style={{ padding: '8px' }}>{e.variety}</td>
-                                <td style={{ padding: '8px' }}>{e.partyName}</td>
+                                <td style={{ padding: '8px' }}>
+                                    <div style={{ fontWeight: '600', color: '#1565c0' }}>{toTitleCase(e.partyName) || (e.entryType === 'DIRECT_LOADED_VEHICLE' ? e.lorryNumber?.toUpperCase() : '')}</div>
+                                    {e.entryType === 'DIRECT_LOADED_VEHICLE' && e.lorryNumber && e.partyName && <div style={{ fontSize: '10px', color: '#1565c0', fontWeight: '600' }}>{e.lorryNumber.toUpperCase()}</div>}
+                                </td>
                                 <td style={{ padding: '8px' }}>{e.location}</td>
                                 <td style={{ padding: '8px' }}>
                                     <span style={{ padding: '2px 8px', borderRadius: '12px', fontSize: '11px', fontWeight: '600', background: '#fff3cd', color: '#856404' }}>

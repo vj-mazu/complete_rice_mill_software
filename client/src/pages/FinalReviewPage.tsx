@@ -23,6 +23,11 @@ const ContentWrapper = styled.div`
   animation: ${fadeIn} 0.5s ease-out;
 `;
 
+const toTitleCase = (str: string) => {
+    if (!str) return '';
+    return str.replace(/\w\S*/g, (txt) => txt.charAt(0).toUpperCase() + txt.substr(1).toLowerCase());
+};
+
 const PageHeader = styled.div`
   margin-bottom: 2rem;
   display: flex;
@@ -288,9 +293,13 @@ const FinalReviewPage: React.FC = () => {
                                         entries.map(e => (
                                             <tr key={e.id}>
                                                 <td>{new Date(e.entryDate).toLocaleDateString()}</td>
-                                                <td><div style={{ fontWeight: 700 }}>{e.partyName}</div><div style={{ fontSize: '0.75rem', color: '#64748b' }}>{e.variety}</div></td>
+                                                <td>
+                                                    <div style={{ fontWeight: 600, color: '#1565c0' }}>{toTitleCase(e.partyName) || (e.entryType === 'DIRECT_LOADED_VEHICLE' ? e.lorryNumber?.toUpperCase() : '')}</div>
+                                                    {e.entryType === 'DIRECT_LOADED_VEHICLE' && e.lorryNumber && e.partyName && <div style={{ fontSize: '10px', color: '#1565c0', fontWeight: '600' }}>{e.lorryNumber.toUpperCase()}</div>}
+                                                    <div style={{ fontSize: '0.75rem', color: '#64748b' }}>{e.variety}</div>
+                                                </td>
                                                 <td>{e.brokerName}</td>
-                                                <td>{e.bags}</td>
+                                                <td>{e.bags?.toLocaleString('en-IN')}</td>
                                                 <td><PrimaryButton style={{ padding: '0.4rem 1rem', fontSize: '0.8rem' }} onClick={() => setSelectedEntry(e)}>Review Audit</PrimaryButton></td>
                                             </tr>
                                         ))
@@ -315,7 +324,7 @@ const FinalReviewPage: React.FC = () => {
         financial: i.inventoryData?.financialCalculation
     }));
 
-    const totalActualBags = inspections.reduce((sum: number, i: any) => sum + (i.bags || 0), 0);
+    const totalActualBags = inspections.reduce((sum: number, i: any) => sum + (i.bags || 0), 0).toLocaleString('en-IN');
     const totalNetWeight = lorryFlows.reduce((sum: number, f: any) => sum + Number(f.inventory?.netWeight || 0), 0);
     const totalAmount = lorryFlows.reduce((sum: number, f: any) => sum + Number(f.financial?.totalAmount || 0), 0);
     const avgRate = totalNetWeight > 0 ? (totalAmount / totalNetWeight * 100) : 0;
@@ -326,7 +335,7 @@ const FinalReviewPage: React.FC = () => {
                 <PageHeader>
                     <TitleGroup>
                         <h1>Comprehensive Workflow Audit</h1>
-                        <p>Complete role-by-role sequence for {selectedEntry.partyName} - {selectedEntry.variety}</p>
+                        <p>Complete role-by-role sequence for {toTitleCase(selectedEntry.partyName) || selectedEntry.lorryNumber?.toUpperCase()} - {selectedEntry.variety}</p>
                     </TitleGroup>
                     <BackButton onClick={() => setSelectedEntry(null)}><span>←</span> BACK TO SELECTION</BackButton>
                 </PageHeader>
@@ -355,9 +364,9 @@ const FinalReviewPage: React.FC = () => {
                                     <td>{new Date(selectedEntry.entryDate).toLocaleDateString()}</td>
                                     <td>{selectedEntry.brokerName}</td>
                                     <td style={{ fontWeight: 700 }}>{selectedEntry.variety}</td>
-                                    <td style={{ fontWeight: 700 }}>{selectedEntry.partyName}</td>
+                                    <td style={{ fontWeight: 700 }}>{toTitleCase(selectedEntry.partyName) || selectedEntry.lorryNumber?.toUpperCase()}</td>
                                     <td>{selectedEntry.location}</td>
-                                    <td>{selectedEntry.bags}</td>
+                                    <td>{selectedEntry.bags?.toLocaleString('en-IN')}</td>
                                     <td>{selectedEntry.lorryNumber || '-'}</td>
                                 </tr>
                             </tbody>
@@ -397,7 +406,7 @@ const FinalReviewPage: React.FC = () => {
                                     <td>{qp?.kandu || 0}</td>
                                     <td>{qp?.oil || 0}</td>
                                     <td>{qp?.sk || 0}</td>
-                                    <td>{qp?.grainsCount || 0}</td>
+                                    <td>{qp?.grainsCount ? `(${qp.grainsCount})` : '-'}</td>
                                     <td>{qp?.wbR || 0} / {qp?.wbBk || 0} / {qp?.wbT || 0}</td>
                                 </tr>
                             </tbody>

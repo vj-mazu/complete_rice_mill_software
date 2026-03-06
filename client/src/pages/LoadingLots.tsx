@@ -19,6 +19,9 @@ interface SampleEntry {
     offering?: any;
     creator?: { username: string };
     slNo?: number;
+    finalPrice?: number;
+    entryType?: string;
+    lorryNumber?: string;
 }
 
 const unitLabel = (u: string) => {
@@ -30,6 +33,8 @@ const fmtVal = (val: any, unit?: string) => {
     if (val == null || val === '') return '-';
     return unit ? `${val} ${unitLabel(unit)}` : `${val}`;
 };
+
+const toTitleCase = (str: string) => str ? str.replace(/\b\w/g, c => c.toUpperCase()) : '';
 
 const LoadingLots: React.FC = () => {
     const { user } = useAuth();
@@ -168,6 +173,7 @@ const LoadingLots: React.FC = () => {
 
     const isManagerOrOwner = user?.role === 'manager' || user?.role === 'owner' || user?.role === 'admin';
 
+
     // Format workflow status to friendly name
     const statusLabel = (s: string) => {
         const map: Record<string, string> = {
@@ -192,7 +198,7 @@ const LoadingLots: React.FC = () => {
     return (
         <div>
             {/* Filter Toggle */}
-            <div style={{ marginBottom: '12px', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+            <div style={{ marginBottom: '0px', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
                 <span style={{ fontSize: '14px', color: '#666' }}>Showing {entries.length} of {total} lots</span>
                 <button
                     onClick={() => setShowFilters(!showFilters)}
@@ -218,149 +224,177 @@ const LoadingLots: React.FC = () => {
             )}
 
             {/* Table */}
-            <div style={{ overflowX: 'auto', borderRadius: '6px', border: '1px solid #ddd' }}>
+            <div style={{ overflowX: 'auto', borderRadius: '6px' }}>
                 {loading ? (
                     <div style={{ textAlign: 'center', padding: '30px', color: '#888' }}>Loading...</div>
                 ) : entries.length === 0 ? (
                     <div style={{ textAlign: 'center', padding: '30px', color: '#888' }}>No loading lots found</div>
-                ) : Object.entries(groupedByDateBroker).map(([dateStr, brokerGroups]) => (
-                    <div key={dateStr}>
-                        {Object.entries(brokerGroups).map(([brokerName, brokerEntries]) => (
-                            <div key={brokerName}>
-                                {/* Date + Broker Group Header */}
-                                <div style={{
-                                    background: 'linear-gradient(135deg, #1a1a2e 0%, #16213e 100%)',
-                                    color: 'white', padding: '8px 12px', fontWeight: '700',
-                                    fontSize: '13px', letterSpacing: '0.5px', textAlign: 'center'
-                                }}>
-                                    📅 {dateStr} — {brokerName} ({brokerEntries.length} {brokerEntries.length === 1 ? 'lot' : 'lots'})
-                                </div>
-                                <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: '12px', tableLayout: 'auto' }}>
-                                    <thead>
-                                        <tr style={{ background: 'linear-gradient(135deg, #2c3e50, #3498db)', color: 'white' }}>
-                                            {['SL', 'Bags', 'Pkg', 'Party', 'Paddy Location', 'Variety', 'Final Rate', 'Sute', 'Mst%', 'Hamali', 'Bkrg', 'LF', 'Status', 'Actions'].map(h => (
-                                                <th key={h} style={{ padding: '10px 6px', textAlign: 'center', fontWeight: '600', whiteSpace: 'nowrap', fontSize: '11px' }}>{h}</th>
-                                            ))}
-                                        </tr>
-                                    </thead>
-                                    <tbody>
-                                        {brokerEntries.map((e, i) => {
-                                            const o = e.offering || {};
-                                            // Check which fields the admin left blank (disabled) that need manager fill
-                                            const suteMissing = o.suteEnabled === false && !parseFloat(o.finalSute) && !parseFloat(o.sute);
-                                            const mstMissing = o.moistureEnabled === false && !parseFloat(o.moistureValue);
-                                            const hamaliMissing = o.hamaliEnabled === false && !parseFloat(o.hamali);
-                                            const bkrgMissing = o.brokerageEnabled === false && !parseFloat(o.brokerage);
-                                            const lfMissing = o.lfEnabled === false && !parseFloat(o.lf);
-                                            const needsFill = suteMissing || mstMissing || hamaliMissing || bkrgMissing || lfMissing;
-
-                                            const cellStyle = (missing: boolean) => ({
-                                                padding: '6px',
-                                                textAlign: 'center' as const,
-                                                background: missing ? '#fff3cd' : 'transparent',
-                                                color: missing ? '#856404' : '#333',
-                                                fontWeight: missing ? '700' : '400' as any,
-                                                fontSize: '12px'
-                                            });
-
-                                            const statusColors: Record<string, { bg: string; color: string }> = {
-                                                LOT_ALLOTMENT: { bg: '#e3f2fd', color: '#1565c0' },
-                                                PENDING_ALLOTTING_SUPERVISOR: { bg: '#fce4ec', color: '#880e4f' },
-                                                PHYSICAL_INSPECTION: { bg: '#fff3e0', color: '#e65100' },
-                                                INVENTORY_ENTRY: { bg: '#e8f5e9', color: '#2e7d32' },
-                                                OWNER_FINANCIAL: { bg: '#f3e5f5', color: '#7b1fa2' },
-                                                MANAGER_FINANCIAL: { bg: '#e0f7fa', color: '#00695c' },
-                                                FINAL_REVIEW: { bg: '#fce4ec', color: '#c62828' }
-                                            };
-                                            const sc = statusColors[e.workflowStatus] || { bg: '#f5f5f5', color: '#333' };
-
-                                            return (
-                                                <tr key={e.id} style={{ background: i % 2 === 0 ? '#fff' : '#fafafa', borderBottom: '1px solid #eee' }}>
-                                                    <td style={{ padding: '6px', textAlign: 'center', fontWeight: '700', fontSize: '12px' }}>{i + 1 + (page - 1) * pageSize}</td>
-                                                    <td style={{ padding: '6px', textAlign: 'center', fontWeight: '600', fontSize: '12px' }}>{e.bags}</td>
-                                                    <td style={{ padding: '6px', textAlign: 'center', fontSize: '12px' }}>{e.packaging || '-'}</td>
-                                                    <td style={{ padding: '6px', textAlign: 'center', fontSize: '12px' }}>{e.partyName}</td>
-                                                    <td style={{ padding: '6px', textAlign: 'center', fontSize: '12px' }}>{e.location || '-'}</td>
-                                                    <td style={{ padding: '6px', textAlign: 'center', fontSize: '12px' }}>{e.variety}</td>
-                                                    <td style={{ padding: '6px', textAlign: 'center', fontSize: '11px' }}>
-                                                        {o.finalBaseRate ?? o.offerBaseRateValue ? (
-                                                            <div>
-                                                                <div style={{ fontWeight: '700', fontSize: '12px', color: '#2c3e50' }}>
-                                                                    ₹{o.finalBaseRate ?? o.offerBaseRateValue}
-                                                                    <span style={{ fontSize: '10px', color: '#666' }}>{o.baseRateUnit === 'per_quintal' ? '/Qtl' : '/Bag'}</span>
-                                                                </div>
-                                                                <div style={{ fontSize: '9px', color: '#888', fontWeight: '500' }}>
-                                                                    {o.baseRateType?.replace('_', '/') || ''}
-                                                                </div>
-                                                                {o.egbValue != null && o.egbValue > 0 && (
-                                                                    <div style={{ fontSize: '9px', color: '#e67e22', fontWeight: '600' }}>EGB: {o.egbValue}</div>
-                                                                )}
-                                                            </div>
-                                                        ) : '-'}
-                                                    </td>
-                                                    <td style={cellStyle(suteMissing)}>
-                                                        {suteMissing ? '⚠ Need' : fmtVal(o.finalSute ?? o.sute, o.finalSuteUnit ?? o.suteUnit)}
-                                                    </td>
-                                                    <td style={cellStyle(mstMissing)}>
-                                                        {mstMissing ? '⚠ Need' : (o.moistureValue != null ? `${o.moistureValue}%` : '-')}
-                                                    </td>
-                                                    <td style={cellStyle(hamaliMissing)}>
-                                                        {hamaliMissing ? '⚠ Need' : (o.hamali || o.hamaliPerKg ? `${o.hamali || o.hamaliPerKg} ${o.hamaliUnit === 'per_quintal' ? '/Qtl' : '/Bag'}` : o.hamaliEnabled === false ? '⏳' : '-')}
-                                                    </td>
-                                                    <td style={cellStyle(bkrgMissing)}>
-                                                        {bkrgMissing ? '⚠ Need' : (o.brokerage ? `${o.brokerage} ${o.brokerageUnit === 'per_quintal' ? '/Qtl' : '/Bag'}` : o.brokerageEnabled === false ? '⏳' : '-')}
-                                                    </td>
-                                                    <td style={cellStyle(lfMissing)}>
-                                                        {lfMissing ? '⚠ Need' : (o.lf ? `${o.lf} ${o.lfUnit === 'per_quintal' ? '/Qtl' : '/Bag'}` : o.lfEnabled === false ? '⏳' : '-')}
-                                                    </td>
-                                                    <td style={{ padding: '6px', textAlign: 'center' }}>
-                                                        <div>
-                                                            <span style={{ padding: '2px 6px', borderRadius: '10px', fontSize: '10px', fontWeight: '700', background: '#d4edda', color: '#155724', whiteSpace: 'nowrap', display: 'inline-block', marginBottom: '2px', border: '1px solid #c3e6cb' }}>
-                                                                Admin Added ✅
-                                                            </span>
-                                                        </div>
-                                                        <div>
-                                                            <span style={{ padding: '2px 6px', borderRadius: '10px', fontSize: '10px', fontWeight: '700', background: needsFill ? '#fff3cd' : '#d4edda', color: needsFill ? '#856404' : '#155724', whiteSpace: 'nowrap', display: 'inline-block', marginBottom: '2px', border: needsFill ? '1px solid #ffeeba' : '1px solid #c3e6cb' }}>
-                                                                {needsFill ? 'Manager Missing ⏳' : 'Manager Added ✅✅'}
-                                                            </span>
-                                                        </div>
-                                                        <span style={{ padding: '1px 4px', borderRadius: '8px', fontSize: '9px', fontWeight: '600', background: sc.bg, color: sc.color, whiteSpace: 'nowrap' }}>
-                                                            {statusLabel(e.workflowStatus)}
-                                                        </span>
-                                                    </td>
-                                                    <td style={{ padding: '6px', textAlign: 'center' }}>
-                                                        {isManagerOrOwner && (
-                                                            <button
-                                                                onClick={() => handleUpdateClick(e)}
-                                                                style={{
-                                                                    padding: '4px 10px',
-                                                                    background: needsFill ? '#e67e22' : '#3498db',
-                                                                    color: 'white',
-                                                                    border: 'none', borderRadius: '4px', fontSize: '11px',
-                                                                    cursor: 'pointer', fontWeight: '700', whiteSpace: 'nowrap'
-                                                                }}
-                                                            >
-                                                                {needsFill ? '⚠ Fill Values' : '✏️ View/Edit'}
-                                                            </button>
-                                                        )}
-                                                    </td>
+                ) : Object.entries(groupedByDateBroker).map(([dateStr, brokerGroups]) => {
+                    let brokerSeq = 0;
+                    return (
+                        <div key={dateStr}>
+                            {Object.entries(brokerGroups).sort(([a], [b]) => a.localeCompare(b)).map(([brokerName, brokerEntries], brokerIdx) => {
+                                brokerSeq++;
+                                return (
+                                    <div key={brokerName} style={{ marginBottom: '0px' }}>
+                                        {/* Date bar — only first broker */}
+                                        {brokerIdx === 0 && <div style={{
+                                            background: 'linear-gradient(135deg, #1a1a2e 0%, #16213e 100%)',
+                                            color: 'white', padding: '6px 10px', fontWeight: '700', fontSize: '14px',
+                                            textAlign: 'center', letterSpacing: '0.5px'
+                                        }}>
+                                            {(() => { const d = new Date(brokerEntries[0]?.entryDate); return `${String(d.getDate()).padStart(2, '0')}-${String(d.getMonth() + 1).padStart(2, '0')}-${d.getFullYear()}`; })()}
+                                            &nbsp;&nbsp;Paddy Sample
+                                        </div>}
+                                        {/* Broker name bar */}
+                                        <div style={{
+                                            background: '#e8eaf6',
+                                            color: '#000', padding: '4px 10px', fontWeight: '700', fontSize: '13.5px',
+                                            display: 'flex', alignItems: 'center', gap: '4px'
+                                        }}>
+                                            <span style={{ fontSize: '13.5px', fontWeight: '800' }}>{brokerSeq}.</span> {brokerName}
+                                        </div>
+                                        <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: '12px', tableLayout: 'fixed', border: '1px solid #000' }}>
+                                            <thead>
+                                                <tr style={{ backgroundColor: '#1a237e', color: 'white', }}>
+                                                    {['SL', 'Type', 'Bags', 'Pkg', 'Party Name', 'Paddy Location', 'Variety', 'Final Rate', 'Sute', 'Mst%', 'Hamali', 'Bkrg', 'LF', 'Status', 'Action'].map(h => (
+                                                        <th key={h} style={{ border: '1px solid #000', padding: '3px 4px', textAlign: 'left', fontWeight: '600', whiteSpace: 'nowrap', fontSize: '12px' }}>{h}</th>
+                                                    ))}
                                                 </tr>
-                                            );
-                                        })}
-                                    </tbody>
-                                </table>
-                            </div>
-                        ))}
-                    </div>
-                ))}
+                                            </thead>
+                                            <tbody>
+                                                {brokerEntries.map((e, i) => {
+                                                    const o = e.offering || {};
+                                                    // Check which fields the admin left blank (disabled) that need manager fill
+                                                    const suteMissing = o.suteEnabled === false && !parseFloat(o.finalSute) && !parseFloat(o.sute);
+                                                    const mstMissing = o.moistureEnabled === false && !parseFloat(o.moistureValue);
+                                                    const hamaliMissing = o.hamaliEnabled === false && !parseFloat(o.hamali);
+                                                    const bkrgMissing = o.brokerageEnabled === false && !parseFloat(o.brokerage);
+                                                    const lfMissing = o.lfEnabled === false && !parseFloat(o.lf);
+                                                    const needsFill = suteMissing || mstMissing || hamaliMissing || bkrgMissing || lfMissing;
+
+                                                    const cellStyle = (missing: boolean) => ({
+                                                        padding: '3px 4px',
+                                                        textAlign: 'left' as const,
+                                                        background: missing ? '#fff3cd' : 'transparent',
+                                                        color: missing ? '#856404' : '#333',
+                                                        fontWeight: missing ? '700' : '400' as any,
+                                                        fontSize: '12px'
+                                                    });
+
+                                                    const statusColors: Record<string, { bg: string; color: string }> = {
+                                                        LOT_ALLOTMENT: { bg: '#e3f2fd', color: '#1565c0' },
+                                                        PENDING_ALLOTTING_SUPERVISOR: { bg: '#fce4ec', color: '#880e4f' },
+                                                        PHYSICAL_INSPECTION: { bg: '#ffe0b2', color: '#e65100' },
+                                                        INVENTORY_ENTRY: { bg: '#e8f5e9', color: '#2e7d32' },
+                                                        OWNER_FINANCIAL: { bg: '#f3e5f5', color: '#7b1fa2' },
+                                                        MANAGER_FINANCIAL: { bg: '#e0f7fa', color: '#00695c' },
+                                                        FINAL_REVIEW: { bg: '#fce4ec', color: '#c62828' }
+                                                    };
+                                                    const sc = statusColors[e.workflowStatus] || { bg: '#f5f5f5', color: '#333' };
+
+                                                    const rowBg = e.entryType === 'DIRECT_LOADED_VEHICLE'
+                                                        ? '#e3f2fd'
+                                                        : e.entryType === 'LOCATION_SAMPLE'
+                                                            ? '#ffe0b2'
+                                                            : '#ffffff';
+                                                    return (
+                                                        <tr key={e.id} style={{ background: rowBg, }}>
+                                                            <td style={{ border: '1px solid #000', padding: '3px 4px', textAlign: 'left', fontWeight: '600', fontSize: '14px' }}>{i + 1 + (page - 1) * pageSize}</td>
+                                                            <td style={{ border: '1px solid #000', padding: '1px 3px', textAlign: 'center', verticalAlign: 'middle' }}>
+                                                                {e.entryType === 'DIRECT_LOADED_VEHICLE' && <span style={{ color: 'white', backgroundColor: '#1565c0', padding: '1px 4px', borderRadius: '3px', fontSize: '10px', fontWeight: '800' }}>RL</span>}
+                                                                {e.entryType === 'LOCATION_SAMPLE' && <span style={{ color: 'white', backgroundColor: '#e67e22', padding: '1px 4px', borderRadius: '3px', fontSize: '10px', fontWeight: '800' }}>LS</span>}
+                                                                {e.entryType !== 'DIRECT_LOADED_VEHICLE' && e.entryType !== 'LOCATION_SAMPLE' && <span style={{ color: '#333', backgroundColor: '#fff', padding: '1px 4px', borderRadius: '3px', fontSize: '10px', fontWeight: '800', border: '1px solid #ccc' }}>MS</span>}
+                                                            </td>
+                                                            <td style={{ border: '1px solid #000', padding: '3px 4px', textAlign: 'left', fontWeight: '600', fontSize: '14px' }}>{e.bags?.toLocaleString('en-IN')}</td>
+                                                            <td style={{ border: '1px solid #000', padding: '3px 4px', textAlign: 'left', fontSize: '14px' }}>{e.packaging || '-'}</td>
+                                                            <td style={{ border: '1px solid #000', padding: '3px 4px', textAlign: 'left', fontSize: '14px' }}>
+                                                                <div style={{ fontWeight: '600', color: '#1565c0' }}>{toTitleCase(e.partyName) || (e.entryType === 'DIRECT_LOADED_VEHICLE' ? e.lorryNumber?.toUpperCase() : '')}</div>
+                                                                {e.entryType === 'DIRECT_LOADED_VEHICLE' && e.lorryNumber && e.partyName && <div style={{ fontSize: '10px', color: '#1565c0', fontWeight: '600' }}>{e.lorryNumber.toUpperCase()}</div>}
+                                                            </td>
+                                                            <td style={{ border: '1px solid #000', padding: '3px 4px', textAlign: 'left', fontSize: '14px' }}>{e.location || '-'}</td>
+                                                            <td style={{ border: '1px solid #000', padding: '3px 4px', textAlign: 'left', fontSize: '14px' }}>{e.variety}</td>
+                                                            <td style={{ border: '1px solid #000', padding: '3px 4px', textAlign: 'left', fontSize: '14px' }}>
+                                                                {o.finalBaseRate ?? o.offerBaseRateValue ? (
+                                                                    <div>
+                                                                        <div style={{ fontWeight: '700', fontSize: '14px', color: '#2c3e50' }}>
+                                                                            ₹{o.finalBaseRate ?? o.offerBaseRateValue}
+                                                                            <span style={{ fontSize: '10px', color: '#666' }}>{o.baseRateUnit === 'per_quintal' ? '/Qtl' : '/Bag'}</span>
+                                                                        </div>
+                                                                        <div style={{ fontSize: '9px', color: '#888', fontWeight: '500' }}>
+                                                                            {o.baseRateType?.replace('_', '/') || ''}
+                                                                        </div>
+                                                                        {o.egbValue != null && o.egbValue > 0 && (
+                                                                            <div style={{ fontSize: '9px', color: '#e67e22', fontWeight: '600' }}>EGB: {o.egbValue}</div>
+                                                                        )}
+                                                                    </div>
+                                                                ) : '-'}
+                                                            </td>
+                                                            <td style={cellStyle(suteMissing)}>
+                                                                {suteMissing ? '⚠ Need' : fmtVal(o.finalSute ?? o.sute, o.finalSuteUnit ?? o.suteUnit)}
+                                                            </td>
+                                                            <td style={cellStyle(mstMissing)}>
+                                                                {mstMissing ? '⚠ Need' : (o.moistureValue != null ? `${o.moistureValue}%` : '-')}
+                                                            </td>
+                                                            <td style={cellStyle(hamaliMissing)}>
+                                                                {hamaliMissing ? '⚠ Need' : (o.hamali || o.hamaliPerKg ? `${o.hamali || o.hamaliPerKg} ${o.hamaliUnit === 'per_quintal' ? '/Qtl' : '/Bag'}` : o.hamaliEnabled === false ? '⏳' : '-')}
+                                                            </td>
+                                                            <td style={cellStyle(bkrgMissing)}>
+                                                                {bkrgMissing ? '⚠ Need' : (o.brokerage ? `${o.brokerage} ${o.brokerageUnit === 'per_quintal' ? '/Qtl' : '/Bag'}` : o.brokerageEnabled === false ? '⏳' : '-')}
+                                                            </td>
+                                                            <td style={cellStyle(lfMissing)}>
+                                                                {lfMissing ? '⚠ Need' : (o.lf ? `${o.lf} ${o.lfUnit === 'per_quintal' ? '/Qtl' : '/Bag'}` : o.lfEnabled === false ? '⏳' : '-')}
+                                                            </td>
+                                                            <td style={{ border: '1px solid #000', padding: '6px', textAlign: 'center' }}>
+                                                                <div>
+                                                                    <span style={{ padding: '2px 6px', borderRadius: '10px', fontSize: '10px', fontWeight: '700', background: '#d4edda', color: '#155724', whiteSpace: 'nowrap', display: 'inline-block', marginBottom: '2px', border: '1px solid #c3e6cb' }}>
+                                                                        Admin Added ✅
+                                                                    </span>
+                                                                </div>
+                                                                <div>
+                                                                    <span style={{ padding: '2px 6px', borderRadius: '10px', fontSize: '10px', fontWeight: '700', background: needsFill ? '#fff3cd' : '#d4edda', color: needsFill ? '#856404' : '#155724', whiteSpace: 'nowrap', display: 'inline-block', marginBottom: '2px', border: needsFill ? '1px solid #ffeeba' : '1px solid #c3e6cb' }}>
+                                                                        {needsFill ? 'Manager Missing ⏳' : 'Manager Added ✅✅'}
+                                                                    </span>
+                                                                </div>
+                                                                <span style={{ padding: '1px 4px', borderRadius: '8px', fontSize: '9px', fontWeight: '600', background: sc.bg, color: sc.color, whiteSpace: 'nowrap' }}>
+                                                                    {statusLabel(e.workflowStatus)}
+                                                                </span>
+                                                            </td>
+                                                            <td style={{ border: '1px solid #000', padding: '6px', textAlign: 'center' }}>
+                                                                {isManagerOrOwner && (
+                                                                    <button
+                                                                        onClick={() => handleUpdateClick(e)}
+                                                                        style={{
+                                                                            padding: '3px 4px',
+                                                                            background: needsFill ? '#e67e22' : '#3498db',
+                                                                            color: 'white',
+                                                                            border: 'none', borderRadius: '4px', fontSize: '11px',
+                                                                            cursor: 'pointer', fontWeight: '700', whiteSpace: 'nowrap'
+                                                                        }}
+                                                                    >
+                                                                        {needsFill ? '⚠ Fill Values' : '✏️ View/Edit'}
+                                                                    </button>
+                                                                )}
+                                                            </td>
+                                                        </tr>
+                                                    );
+                                                })}
+                                            </tbody>
+                                        </table>
+                                    </div>
+                                );
+                            })}
+                        </div>
+                    );
+                })}
             </div>
 
             {/* Pagination */}
             {totalPages > 1 && (
                 <div style={{ display: 'flex', justifyContent: 'center', gap: '6px', marginTop: '12px', alignItems: 'center' }}>
-                    <button disabled={page <= 1} onClick={() => setPage(p => p - 1)} style={{ padding: '6px 12px', border: '1px solid #ddd', borderRadius: '4px', cursor: page <= 1 ? 'not-allowed' : 'pointer', background: page <= 1 ? '#f5f5f5' : 'white' }}>← Prev</button>
+                    <button disabled={page <= 1} onClick={() => setPage(p => p - 1)} style={{ padding: '6px 12px', borderRadius: '4px', cursor: page <= 1 ? 'not-allowed' : 'pointer', background: page <= 1 ? '#f5f5f5' : 'white' }}>← Prev</button>
                     <span style={{ padding: '6px 12px', fontSize: '13px', color: '#666' }}>Page {page} of {totalPages} ({total} total)</span>
-                    <button disabled={page >= totalPages} onClick={() => setPage(p => p + 1)} style={{ padding: '6px 12px', border: '1px solid #ddd', borderRadius: '4px', cursor: page >= totalPages ? 'not-allowed' : 'pointer', background: page >= totalPages ? '#f5f5f5' : 'white' }}>Next →</button>
+                    <button disabled={page >= totalPages} onClick={() => setPage(p => p + 1)} style={{ padding: '6px 12px', borderRadius: '4px', cursor: page >= totalPages ? 'not-allowed' : 'pointer', background: page >= totalPages ? '#f5f5f5' : 'white' }}>Next →</button>
                 </div>
             )}
 
@@ -388,12 +422,12 @@ const LoadingLots: React.FC = () => {
                             {/* Entry Info — one line */}
                             <div style={{ background: '#f8f9fa', padding: '8px 14px', borderRadius: '6px', marginBottom: '14px', border: '1px solid #e0e0e0', textAlign: 'center' }}>
                                 <span style={{ fontSize: '12px', color: '#333' }}>
-                                    Bags: <b>{selectedEntry.bags}</b> | Pkg: <b>{selectedEntry.packaging || '75'} Kg</b> | Party: <b>{selectedEntry.partyName}</b> | Paddy Location: <b>{selectedEntry.location || '-'}</b> | Variety: <b>{selectedEntry.variety}</b>
+                                    Bags: <b>{selectedEntry.bags}</b> | Pkg: <b>{selectedEntry.packaging || '75'} Kg</b> | Party: <b>{toTitleCase(selectedEntry.partyName) || (selectedEntry.entryType === 'DIRECT_LOADED_VEHICLE' ? selectedEntry.lorryNumber?.toUpperCase() : '')}</b> | Paddy Location: <b>{selectedEntry.location || '-'}</b> | Variety: <b>{selectedEntry.variety}</b>
                                 </span>
                             </div>
 
                             {/* Admin-Set Values (Read-Only) */}
-                            <div style={{ marginBottom: '16px' }}>
+                            <div style={{ marginBottom: '0px' }}>
                                 <h4 style={{ fontSize: '13px', color: '#7f8c8d', margin: '0 0 8px', textTransform: 'capitalize', letterSpacing: '1px' }}>
                                     🔒 Admin Set Values
                                 </h4>
@@ -540,7 +574,7 @@ const LoadingLots: React.FC = () => {
                             </div>
 
                             <div style={{ display: 'flex', justifyContent: 'flex-end', gap: '8px', marginTop: '20px', borderTop: '1px solid #eee', paddingTop: '14px' }}>
-                                <button onClick={() => setShowModal(false)} disabled={isSubmitting} style={{ padding: '8px 16px', border: '1px solid #ddd', borderRadius: '6px', background: 'white', cursor: isSubmitting ? 'not-allowed' : 'pointer', fontSize: '13px' }}>Cancel</button>
+                                <button onClick={() => setShowModal(false)} disabled={isSubmitting} style={{ padding: '8px 16px', borderRadius: '6px', background: 'white', cursor: isSubmitting ? 'not-allowed' : 'pointer', fontSize: '13px' }}>Cancel</button>
                                 <button onClick={handleSaveValues} disabled={isSubmitting} style={{
                                     padding: '8px 24px', border: 'none', borderRadius: '6px',
                                     background: isSubmitting ? '#95a5a6' : 'linear-gradient(135deg, #27ae60, #2ecc71)',

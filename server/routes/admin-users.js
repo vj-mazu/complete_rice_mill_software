@@ -10,12 +10,12 @@ const router = express.Router();
  * GET /api/admin/users
  * Get all users (admin only)
  */
-router.get('/users', auth, authorize('admin'), async (req, res) => {
+router.get('/users', auth, authorize('admin', 'manager', 'staff'), async (req, res) => {
     try {
         let users;
         try {
             users = await User.findAll({
-                attributes: ['id', 'username', 'role', 'isActive', 'staffType', 'createdAt', 'updatedAt'],
+                attributes: ['id', 'username', 'role', 'isActive', 'staffType', 'qualityName', 'createdAt', 'updatedAt'],
                 order: [['role', 'ASC'], ['username', 'ASC']]
             });
         } catch (attrError) {
@@ -34,6 +34,7 @@ router.get('/users', auth, authorize('admin'), async (req, res) => {
                 role: user.role,
                 isActive: user.isActive,
                 staffType: user.staffType || null,
+                qualityName: user.qualityName || null,
                 createdAt: user.createdAt,
                 updatedAt: user.updatedAt
             }))
@@ -79,7 +80,7 @@ router.get('/physical-supervisors', auth, authorize('admin', 'manager'), async (
  */
 router.post('/users', auth, authorize('admin'), async (req, res) => {
     try {
-        const { username, password, role, staffType } = req.body;
+        const { username, password, role, staffType, qualityName } = req.body;
 
         // Validation
         if (!username || !password || !role) {
@@ -118,7 +119,8 @@ router.post('/users', auth, authorize('admin'), async (req, res) => {
             password: hashedPassword,
             role: role,
             isActive: true,
-            staffType: role === 'staff' ? (staffType || 'mill') : null
+            staffType: role === 'staff' ? (staffType || 'mill') : null,
+            qualityName: qualityName || null
         });
 
         console.log(`✅ Admin ${req.user.username} created new user: ${newUser.username} (${role})`);
@@ -265,7 +267,7 @@ router.put('/users/:id/status', auth, authorize('admin'), async (req, res) => {
 router.put('/users/:id/role', auth, authorize('admin'), async (req, res) => {
     try {
         const { id } = req.params;
-        const { role } = req.body;
+        const { role, staffType } = req.body;
 
         // Prevent admin from changing their own role
         if (parseInt(id) === req.user.userId) {
@@ -282,9 +284,14 @@ router.put('/users/:id/role', auth, authorize('admin'), async (req, res) => {
             return res.status(404).json({ error: 'User not found' });
         }
 
-        await user.update({ role });
+        const updateData = { role };
+        // Update staffType if provided (mill or location)
+        if (staffType) {
+            updateData.staffType = staffType;
+        }
+        await user.update(updateData);
 
-        console.log(`✅ Admin ${req.user.username} changed role for user: ${user.username} to ${role}`);
+        console.log(`✅ Admin ${req.user.username} changed role for user: ${user.username} to ${role}${staffType ? ` (staffType: ${staffType})` : ''}`);
 
         res.json({
             success: true,
@@ -293,6 +300,7 @@ router.put('/users/:id/role', auth, authorize('admin'), async (req, res) => {
                 id: user.id,
                 username: user.username,
                 role: user.role,
+                staffType: user.staffType,
                 isActive: user.isActive
             }
         });
@@ -321,13 +329,15 @@ router.delete('/users/:id', auth, authorize('admin'), async (req, res) => {
         }
 
         const deletedUsername = user.username;
-        await user.destroy();
+        // Soft delete: deactivate user instead of destroying (preserves data records)
+        user.isActive = false;
+        await user.save();
 
-        console.log(`✅ Admin ${req.user.username} deleted user: ${deletedUsername} (ID: ${id})`);
+        console.log(`✅ Admin ${req.user.username} deactivated user: ${deletedUsername} (ID: ${id})`);
 
         res.json({
             success: true,
-            message: 'User deleted successfully'
+            message: 'User deactivated successfully (data records preserved)'
         });
     } catch (error) {
         console.error('Delete user error:', error);

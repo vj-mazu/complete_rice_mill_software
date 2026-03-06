@@ -42,6 +42,12 @@ const QualityParameters = sequelize.define('QualityParameters', {
       max: 100
     }
   },
+  dryMoisture: {
+    type: DataTypes.DECIMAL(10, 2),
+    allowNull: true,
+    defaultValue: null,
+    field: 'dryMoisture'
+  },
   cutting1: {
     type: DataTypes.DECIMAL(5, 2),
     allowNull: true,

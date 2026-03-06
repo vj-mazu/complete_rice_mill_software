@@ -15,7 +15,10 @@ interface SampleEntry {
   bags: number;
   packaging?: string;
   workflowStatus: string;
+  entryType?: string;
   offeringPrice?: number;
+  lorryNumber?: string;
+  offering?: any;
   priceType?: string;
   suit?: string;
   offerBaseRate?: string;
@@ -78,11 +81,13 @@ interface FinalPriceFormData {
 
 // Shared styles
 const labelStyle: React.CSSProperties = { display: 'block', marginBottom: '6px', fontWeight: '600', color: '#333', fontSize: '13px' };
-const inputStyle: React.CSSProperties = { width: '100%', padding: '10px 12px', border: '1px solid #ddd', borderRadius: '6px', fontSize: '14px', boxSizing: 'border-box', backgroundColor: '#fff' };
+const inputStyle: React.CSSProperties = { width: '100%', padding: '10px 12px', borderRadius: '6px', fontSize: '14px', boxSizing: 'border-box', backgroundColor: '#fff' };
 const radioLabelStyle: React.CSSProperties = { fontSize: '12px', cursor: 'pointer', display: 'flex', alignItems: 'center', gap: '4px' };
 
-const headerCellStyle: React.CSSProperties = { border: '1px solid #ddd', padding: '8px', fontWeight: '600', fontSize: '11px', whiteSpace: 'nowrap' };
-const dataCellStyle: React.CSSProperties = { border: '1px solid #ddd', padding: '6px', fontSize: '11px', whiteSpace: 'nowrap' };
+const headerCellStyle: React.CSSProperties = { padding: '8px', fontWeight: '600', fontSize: '11px', whiteSpace: 'nowrap' };
+const dataCellStyle: React.CSSProperties = { padding: '6px', fontSize: '11px', whiteSpace: 'nowrap' };
+
+const toTitleCase = (str: string) => str ? str.replace(/\b\w/g, c => c.toUpperCase()) : '';
 
 const FinalReport: React.FC = () => {
   const { user } = useAuth();
@@ -168,15 +173,21 @@ const FinalReport: React.FC = () => {
     loadEntries();
   }, [currentPage]);
 
-  const loadEntries = async () => {
+  const loadEntries = async (fB?: string, fV?: string, fFrom?: string, fTo?: string) => {
     try {
       setLoading(true);
       const token = localStorage.getItem('token');
       const params: any = { status: 'FINAL_REPORT', page: currentPage, pageSize };
-      if (filterBroker) params.broker = filterBroker;
-      if (filterVariety) params.variety = filterVariety;
-      if (filterDateFrom) params.startDate = filterDateFrom;
-      if (filterDateTo) params.endDate = filterDateTo;
+
+      const b = fB !== undefined ? fB : filterBroker;
+      const v = fV !== undefined ? fV : filterVariety;
+      const dFrom = fFrom !== undefined ? fFrom : filterDateFrom;
+      const dTo = fTo !== undefined ? fTo : filterDateTo;
+
+      if (b) params.broker = b;
+      if (v) params.variety = v;
+      if (dFrom) params.startDate = dFrom;
+      if (dTo) params.endDate = dTo;
       const response = await axios.get(`${API_URL}/sample-entries/by-role`, {
         params,
         headers: { Authorization: `Bearer ${token}` }
@@ -200,6 +211,17 @@ const FinalReport: React.FC = () => {
   const handleApplyFilters = () => {
     setCurrentPage(1);
     loadEntries();
+  };
+
+  const handleClearFilters = () => {
+    setFilterBroker('');
+    setFilterVariety('');
+    setFilterDateFrom('');
+    setFilterDateTo('');
+    setCurrentPage(1);
+    setTimeout(() => {
+      loadEntries('', '', '', '');
+    }, 0);
   };
 
   const loadOfferingForEntries = async (entryList: SampleEntry[], token: string) => {
@@ -462,7 +484,7 @@ const FinalReport: React.FC = () => {
   return (
     <div>
       {/* Collapsible Filters */}
-      <div style={{ marginBottom: '12px' }}>
+      <div style={{ marginBottom: '0px' }}>
         <button
           onClick={() => setFiltersVisible(!filtersVisible)}
           style={{
@@ -520,9 +542,9 @@ const FinalReport: React.FC = () => {
                   style={{ padding: '4px 12px', border: 'none', borderRadius: '3px', backgroundColor: '#3498db', color: 'white', fontSize: '11px', fontWeight: '600', cursor: 'pointer' }}>
                   Apply Filters
                 </button>
-                <button onClick={() => { setFilterBroker(''); setFilterVariety(''); setFilterDateFrom(''); setFilterDateTo(''); setCurrentPage(1); setTimeout(loadEntries, 0); }}
+                <button onClick={handleClearFilters}
                   style={{ padding: '4px 12px', border: '1px solid #e74c3c', borderRadius: '3px', backgroundColor: '#fff', color: '#e74c3c', fontSize: '11px', fontWeight: '600', cursor: 'pointer' }}>
-                  Clear
+                  Clear Filters
                 </button>
               </div>
             )}
@@ -531,92 +553,121 @@ const FinalReport: React.FC = () => {
       </div>
 
       {/* Table grouped by Date then Broker */}
-      <div style={{ overflowX: 'auto', backgroundColor: 'white', border: '1px solid #ddd' }}>
+      <div style={{ overflowX: 'auto', backgroundColor: 'white' }}>
         {loading ? (
           <div style={{ textAlign: 'center', padding: '20px', color: '#666' }}>Loading...</div>
         ) : Object.keys(groupedEntries).length === 0 ? (
           <div style={{ textAlign: 'center', padding: '20px', color: '#999' }}>No entries pending final report</div>
         ) : (
-          Object.entries(groupedEntries).map(([dateKey, brokerGroups]) => (
-            <div key={dateKey} style={{ marginBottom: '16px' }}>
-              {Object.entries(brokerGroups).map(([brokerName, brokerEntries]) => (
-                <div key={brokerName}>
-                  {/* Merged Date + Broker Header */}
-                  <div style={{
-                    background: 'linear-gradient(135deg, #1a1a2e 0%, #16213e 100%)',
-                    color: 'white', padding: '8px 12px', fontWeight: '700', fontSize: '13px',
-                    letterSpacing: '0.5px', textAlign: 'center'
-                  }}>
-                    {dateKey} — {brokerName} ({brokerEntries.length})
-                  </div>
-                  <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: '12px', tableLayout: 'auto' }}>
-                    <thead>
-                      <tr style={{ backgroundColor: '#4a90e2', color: 'white' }}>
-                        <th style={{ ...headerCellStyle, width: '40px' }}>SL</th>
-                        <th style={headerCellStyle}>Bags</th>
-                        <th style={headerCellStyle}>Pkg</th>
-                        <th style={headerCellStyle}>Party Name</th>
-                        <th style={headerCellStyle}>Paddy Location</th>
-                        <th style={headerCellStyle}>Variety</th>
-                        <th style={headerCellStyle}>Offering Details</th>
-                        <th style={headerCellStyle}>Final Price Details</th>
-                        <th style={headerCellStyle}>Actions</th>
-                      </tr>
-                    </thead>
-                    <tbody>
-                      {brokerEntries.map((entry, index) => {
-                        const o = offeringCache[entry.id];
-                        return (
-                          <tr key={entry.id} style={{ backgroundColor: index % 2 === 0 ? '#f9f9f9' : 'white' }}>
-                            <td style={{ ...dataCellStyle, textAlign: 'center', fontWeight: '600' }}>{index + 1}</td>
-                            <td style={{ ...dataCellStyle, textAlign: 'center', fontWeight: '600' }}>{entry.bags}</td>
-                            <td style={{ ...dataCellStyle, textAlign: 'center' }}>{entry.packaging || '75'}</td>
-                            <td style={dataCellStyle}>{entry.partyName}</td>
-                            <td style={dataCellStyle}>{entry.location}</td>
-                            <td style={dataCellStyle}>{entry.variety}</td>
-                            <td style={{ ...dataCellStyle, fontSize: '10px', maxWidth: '300px', lineHeight: '1.6', whiteSpace: 'normal' }}>
-                              {(entry.offeringPrice || o) ? (
-                                <div>
-                                  <div><strong>₹{o?.offerBaseRateValue || '-'}</strong> {(o?.baseRateType || entry.offerBaseRate || '-').replace(/_/g, '/')} {o?.baseRateUnit === 'per_quintal' ? 'Per Qtl' : o?.baseRateUnit === 'per_ton' ? 'Per Ton' : 'Per Bag'}{o?.customDivisor ? <span style={{ color: '#e67e22' }}> | Div {o.customDivisor}</span> : ''}</div>
-                                  <div>{o?.sute || '-'} Sute {o?.suteUnit === 'per_quintal' ? 'Per Qtl' : o?.suteUnit === 'per_ton' ? 'Per Ton' : 'Per Bag'} | Hamali {o?.hamaliEnabled !== false ? <strong>{o?.hamaliPerKg || o?.hamali || '-'}</strong> : <span style={{ color: '#e74c3c' }}>No</span>}{o?.hamaliEnabled !== false ? ` ${o?.hamaliUnit === 'per_quintal' ? 'Per Qtl' : 'Per Bag'}` : ''}</div>
-                                  <div>Bkrg {o?.brokerageEnabled !== false ? <strong>{o?.brokerage || '-'}</strong> : <span style={{ color: '#e74c3c' }}>No</span>}{o?.brokerageEnabled !== false ? ` ${o?.brokerageUnit === 'per_quintal' ? 'Per Qtl' : 'Per Bag'}` : ''} | LF {o?.lfEnabled !== false ? <strong>{o?.lf || '-'}</strong> : <span style={{ color: '#e74c3c' }}>No</span>}{o?.lfEnabled !== false ? ` ${o?.lfUnit === 'per_quintal' ? 'Per Qtl' : 'Per Bag'}` : ''}{(o?.baseRateType || '').includes('LOOSE') ? <span> | EGB <strong>{o?.egbValue || '0'}</strong> <span style={{ fontSize: '9px', color: o?.egbType === 'purchase' ? '#e65100' : '#2e7d32' }}>({o?.egbType === 'purchase' ? 'Purchase' : 'Mill'})</span></span> : ''}</div>
-                                </div>
-                              ) : '-'}
-                            </td>
-                            <td style={{ ...dataCellStyle, fontSize: '10px', maxWidth: '280px', lineHeight: '1.6' }}>
-                              {(entry.finalPrice || o?.finalPrice) ? (
-                                <div>
-                                  <div><strong>₹{o?.finalPrice || entry.finalPrice}</strong>{o?.finalBaseRate ? ` | Base ${o.finalBaseRate}` : ''}</div>
-                                  <div>{o?.finalSute ? `${o.finalSute} Sute` : '-'} | Hamali {o?.hamaliEnabled ? (o.hamali || o.hamaliPerKg || '-') : <span style={{ color: '#e74c3c' }}>No</span>}</div>
-                                  <div>Bkrg {o?.brokerageEnabled ? (o.brokerage || '-') : <span style={{ color: '#e74c3c' }}>No</span>} | LF {o?.lfEnabled ? (o.lf || '-') : <span style={{ color: '#e74c3c' }}>No</span>}{(o?.baseRateType || '').includes('LOOSE') ? <span> | EGB <strong>{o?.egbValue || '0'}</strong> <span style={{ fontSize: '9px', color: o?.egbType === 'purchase' ? '#e65100' : '#2e7d32' }}>({o?.egbType === 'purchase' ? 'Purchase' : 'Mill'})</span></span> : ''}</div>
-                                </div>
-                              ) : '-'}
-                            </td>
-                            <td style={{ ...dataCellStyle, textAlign: 'center' }}>
-                              <div style={{ display: 'flex', gap: '3px', justifyContent: 'center', flexWrap: 'wrap' }}>
-                                {isAdmin && (
-                                  <button onClick={() => handleOpenOfferModal(entry)}
-                                    style={{ fontSize: '10px', padding: '4px 8px', backgroundColor: (entry.offeringPrice || (offeringCache[entry.id] && offeringCache[entry.id].offerBaseRateValue)) ? '#3498db' : '#2196F3', color: 'white', border: 'none', borderRadius: '3px', cursor: 'pointer', fontWeight: '600', minWidth: '70px' }}>
-                                    {(entry.offeringPrice || (offeringCache[entry.id] && offeringCache[entry.id].offerBaseRateValue)) ? 'Edit Offer' : 'Add Offer'}
-                                  </button>
-                                )}
-                                {(isAdmin || isManager) && (entry.offeringPrice || o) && (
-                                  <button onClick={() => handleOpenFinalModal(entry)}
-                                    style={{ fontSize: '10px', padding: '4px 8px', backgroundColor: entry.finalPrice ? '#27ae60' : '#e67e22', color: 'white', border: 'none', borderRadius: '3px', cursor: 'pointer', fontWeight: '600', minWidth: '70px' }}>
-                                    {entry.finalPrice ? 'Edit Final' : 'Add Final'}
-                                  </button>
-                                )}
-                              </div>
-                            </td>
+          Object.entries(groupedEntries).map(([dateKey, brokerGroups]) => {
+            let brokerSeq = 0; // Initialize broker sequence for each date
+            return (
+              <div key={dateKey} style={{ marginBottom: '20px' }}>
+                {Object.entries(brokerGroups).sort(([a], [b]) => a.localeCompare(b)).map(([brokerName, brokerEntries], brokerIdx) => {
+                  brokerSeq++;
+                  return (
+                    <div key={brokerName} style={{ marginBottom: '0px' }}>
+                      {/* Date bar — only first broker */}
+                      {brokerIdx === 0 && <div style={{
+                        background: 'linear-gradient(135deg, #1a1a2e 0%, #16213e 100%)',
+                        color: 'white', padding: '6px 10px', fontWeight: '700', fontSize: '14px',
+                        textAlign: 'center', letterSpacing: '0.5px'
+                      }}>
+                        {(() => { const d = new Date(brokerEntries[0]?.entryDate); return `${String(d.getDate()).padStart(2, '0')}-${String(d.getMonth() + 1).padStart(2, '0')}-${d.getFullYear()}`; })()}
+                        &nbsp;&nbsp;Paddy Sample
+                      </div>}
+                      {/* Broker name bar */}
+                      <div style={{
+                        background: '#e8eaf6',
+                        color: '#000', padding: '3px 10px', fontWeight: '700', fontSize: '12px',
+                        display: 'flex', alignItems: 'center', gap: '4px', borderBottom: '1px solid #c5cae9'
+                      }}>
+                        <span style={{ fontSize: '12px', fontWeight: '800' }}>{brokerSeq}.</span> {brokerName}
+                      </div>
+                      <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: '11px', tableLayout: 'fixed', border: '1px solid #000' }}>
+                        <thead>
+                          <tr style={{ backgroundColor: '#1a237e', color: 'white', }}>
+                            <th style={{ border: '1px solid #000', padding: '3px 4px', fontWeight: '600', fontSize: '13px', textAlign: 'center', whiteSpace: 'nowrap', width: '3%' }}>SL No</th>
+                            <th style={{ border: '1px solid #000', padding: '3px 4px', fontWeight: '600', fontSize: '13px', textAlign: 'center', whiteSpace: 'nowrap', width: '4%' }}>Type</th>
+                            <th style={{ border: '1px solid #000', padding: '3px 4px', fontWeight: '600', fontSize: '13px', textAlign: 'center', whiteSpace: 'nowrap', width: '4%' }}>Bags</th>
+                            <th style={{ border: '1px solid #000', padding: '3px 4px', fontWeight: '600', fontSize: '13px', textAlign: 'center', whiteSpace: 'nowrap', width: '4%' }}>Pkg</th>
+                            <th style={{ border: '1px solid #000', padding: '3px 4px', fontWeight: '600', fontSize: '13px', textAlign: 'left', whiteSpace: 'nowrap', width: '12%' }}>Party Name</th>
+                            <th style={{ border: '1px solid #000', padding: '3px 4px', fontWeight: '600', fontSize: '13px', textAlign: 'left', whiteSpace: 'nowrap', width: '12%' }}>Paddy Location</th>
+                            <th style={{ border: '1px solid #000', padding: '3px 4px', fontWeight: '600', fontSize: '13px', textAlign: 'left', whiteSpace: 'nowrap', width: '9%' }}>Variety</th>
+                            <th style={{ border: '1px solid #000', padding: '3px 4px', fontWeight: '600', fontSize: '13px', textAlign: 'left', whiteSpace: 'nowrap', width: '22%' }}>Offering Details</th>
+                            <th style={{ border: '1px solid #000', padding: '3px 4px', fontWeight: '600', fontSize: '13px', textAlign: 'left', whiteSpace: 'nowrap', width: '22%' }}>Final Price</th>
+                            <th style={{ border: '1px solid #000', padding: '3px 4px', fontWeight: '600', fontSize: '13px', textAlign: 'center', whiteSpace: 'nowrap', width: '8%' }}>Action</th>
                           </tr>
-                        );
-                      })}
-                    </tbody>
-                  </table>
-                </div>
-              ))}
-            </div>
-          ))
+                        </thead>
+                        <tbody>
+                          {brokerEntries.map((entry, index) => {
+                            const o = offeringCache[entry.id];
+                            const slNo = index + 1;
+                            return (
+                              <tr key={entry.id} style={{ backgroundColor: entry.entryType === 'DIRECT_LOADED_VEHICLE' ? '#e3f2fd' : entry.entryType === 'LOCATION_SAMPLE' ? '#ffe0b2' : '#ffffff', }}>
+                                <td style={{ border: '1px solid #000', padding: '3px 4px', textAlign: 'center', fontWeight: '600', fontSize: '13px', whiteSpace: 'nowrap' }}>{slNo}</td>
+                                <td style={{ border: '1px solid #000', padding: '1px 3px', textAlign: 'center', verticalAlign: 'middle', whiteSpace: 'nowrap' }}>
+                                  {entry.entryType === 'DIRECT_LOADED_VEHICLE' && <span style={{ color: 'white', backgroundColor: '#1565c0', padding: '1px 4px', borderRadius: '3px', fontSize: '12px', fontWeight: '800' }}>RL</span>}
+                                  {entry.entryType === 'LOCATION_SAMPLE' && <span style={{ color: 'white', backgroundColor: '#e67e22', padding: '1px 4px', borderRadius: '3px', fontSize: '12px', fontWeight: '800' }}>LS</span>}
+                                  {entry.entryType !== 'DIRECT_LOADED_VEHICLE' && entry.entryType !== 'LOCATION_SAMPLE' && <span style={{ color: '#333', backgroundColor: '#fff', padding: '1px 4px', borderRadius: '3px', fontSize: '12px', fontWeight: '800', border: '1px solid #ccc' }}>MS</span>}
+                                </td>
+                                <td style={{ border: '1px solid #000', padding: '3px 4px', textAlign: 'center', fontWeight: '600', fontSize: '13px', whiteSpace: 'nowrap' }}>{entry.bags?.toLocaleString('en-IN') || '0'}</td>
+                                <td style={{ border: '1px solid #000', padding: '3px 4px', fontSize: '13px', textAlign: 'center', whiteSpace: 'nowrap' }}>{entry.packaging || '-'}</td>
+                                <td style={{ border: '1px solid #000', padding: '3px 4px', textAlign: 'left', fontSize: '14px', fontWeight: '600', color: '#1565c0', whiteSpace: 'nowrap' }}>{toTitleCase(entry.partyName)}{entry.entryType === 'DIRECT_LOADED_VEHICLE' && entry.lorryNumber ? <div style={{ fontSize: '13px', color: '#1565c0', fontWeight: '600' }}>{entry.lorryNumber.toUpperCase()}</div> : ''}</td>
+                                <td style={{ border: '1px solid #000', padding: '3px 4px', textAlign: 'left', fontSize: '13px', whiteSpace: 'nowrap' }}>{toTitleCase(entry.location) || '-'}</td>
+                                <td style={{ border: '1px solid #000', padding: '3px 4px', textAlign: 'left', fontSize: '13px', whiteSpace: 'nowrap' }}>{toTitleCase(entry.variety)}</td>
+                                <td style={{ border: '1px solid #000', padding: '3px 4px', textAlign: 'left', fontSize: '11px', whiteSpace: 'nowrap' }}>
+                                  {entry.offering?.finalPrice ? (
+                                    <span style={{ color: '#27ae60', fontWeight: '800' }}>₹{entry.offering.finalPrice}</span>
+                                  ) : (
+                                    <span style={{ color: '#e67e22', fontWeight: '700' }}>⏳ Pending</span>
+                                  )}
+                                </td>
+                                <td style={{ border: '1px solid #000', padding: '2px 3px', fontSize: '9px', lineHeight: '1.3', whiteSpace: 'normal', textAlign: 'left' }}>
+                                  {(entry.offeringPrice || o) ? (
+                                    <div>
+                                      <div><strong>₹{o?.offerBaseRateValue || '-'}</strong> {(o?.baseRateType || entry.offerBaseRate || '-').replace(/_/g, '/')} {o?.baseRateUnit === 'per_quintal' ? 'Per Qtl' : o?.baseRateUnit === 'per_ton' ? 'Per Ton' : 'Per Bag'}{o?.customDivisor ? <span style={{ color: '#e67e22' }}> | Div {o.customDivisor}</span> : ''}</div>
+                                      <div>{o?.sute || '-'} Sute {o?.suteUnit === 'per_quintal' ? 'Per Qtl' : o?.suteUnit === 'per_ton' ? 'Per Ton' : 'Per Bag'} | Hamali {o?.hamaliEnabled !== false ? <strong>{o?.hamaliPerKg || o?.hamali || '-'}</strong> : <span style={{ color: '#e74c3c' }}>No</span>}{o?.hamaliEnabled !== false ? ` ${o?.hamaliUnit === 'per_quintal' ? 'Per Qtl' : 'Per Bag'}` : ''}</div>
+                                      <div>Bkrg {o?.brokerageEnabled !== false ? <strong>{o?.brokerage || '-'}</strong> : <span style={{ color: '#e74c3c' }}>No</span>}{o?.brokerageEnabled !== false ? ` ${o?.brokerageUnit === 'per_quintal' ? 'Per Qtl' : 'Per Bag'}` : ''} | LF {o?.lfEnabled !== false ? <strong>{o?.lf || '-'}</strong> : <span style={{ color: '#e74c3c' }}>No</span>}{o?.lfEnabled !== false ? ` ${o?.lfUnit === 'per_quintal' ? 'Per Qtl' : 'Per Bag'}` : ''}{(o?.baseRateType || '').includes('LOOSE') ? <span> | EGB <strong>{o?.egbValue || '0'}</strong> <span style={{ fontSize: '9px', color: o?.egbType === 'purchase' ? '#e65100' : '#2e7d32' }}>({o?.egbType === 'purchase' ? 'Purchase' : 'Mill'})</span></span> : ''}</div>
+                                    </div>
+                                  ) : '-'}
+                                </td>
+                                <td style={{ border: '1px solid #000', padding: '2px 3px', fontSize: '9px', lineHeight: '1.3', textAlign: 'left' }}>
+                                  {(entry.finalPrice || o?.finalPrice) ? (
+                                    <div>
+                                      <div><strong>₹{o?.finalPrice || entry.finalPrice}</strong>{o?.finalBaseRate ? ` | Base ${o.finalBaseRate}` : ''}</div>
+                                      <div>{o?.finalSute ? `${o.finalSute} Sute` : '-'} | Hamali {o?.hamaliEnabled ? (o.hamali || o.hamaliPerKg || '-') : <span style={{ color: '#e74c3c' }}>No</span>}</div>
+                                      <div>Bkrg {o?.brokerageEnabled ? (o.brokerage || '-') : <span style={{ color: '#e74c3c' }}>No</span>} | LF {o?.lfEnabled ? (o.lf || '-') : <span style={{ color: '#e74c3c' }}>No</span>}{(o?.baseRateType || '').includes('LOOSE') ? <span> | EGB <strong>{o?.egbValue || '0'}</strong> <span style={{ fontSize: '9px', color: o?.egbType === 'purchase' ? '#e65100' : '#2e7d32' }}>({o?.egbType === 'purchase' ? 'Purchase' : 'Mill'})</span></span> : ''}</div>
+                                    </div>
+                                  ) : '-'}
+                                </td>
+                                <td style={{ border: '1px solid #000', padding: '4px 6px', textAlign: 'center', whiteSpace: 'nowrap' }}>
+                                  <div style={{ display: 'flex', flexDirection: 'column', gap: '3px', alignItems: 'center' }}>
+                                    {isAdmin && (
+                                      <button onClick={() => handleOpenOfferModal(entry)}
+                                        style={{ fontSize: '10px', padding: '3px 8px', backgroundColor: (entry.offeringPrice || (offeringCache[entry.id] && offeringCache[entry.id].offerBaseRateValue)) ? '#3498db' : '#2196F3', color: 'white', border: 'none', borderRadius: '3px', cursor: 'pointer', fontWeight: '600', whiteSpace: 'nowrap' }}>
+                                        {(entry.offeringPrice || (offeringCache[entry.id] && offeringCache[entry.id].offerBaseRateValue)) ? 'Edit Offer' : 'Add Offer'}
+                                      </button>
+                                    )}
+                                    {(isAdmin || isManager) && (entry.offeringPrice || o) && (
+                                      <button onClick={() => handleOpenFinalModal(entry)}
+                                        style={{ fontSize: '10px', padding: '3px 8px', backgroundColor: entry.finalPrice ? '#27ae60' : '#e67e22', color: 'white', border: 'none', borderRadius: '3px', cursor: 'pointer', fontWeight: '600', whiteSpace: 'nowrap' }}>
+                                        {entry.finalPrice ? 'Edit Final' : 'Add Final'}
+                                      </button>
+                                    )}
+                                  </div>
+                                </td>
+                              </tr>
+                            );
+                          })}
+                        </tbody>
+                      </table>
+                    </div>
+                  );
+                })}
+              </div>
+            );
+          })
         )}
       </div >
 
@@ -677,7 +728,7 @@ const FinalReport: React.FC = () => {
                 backgroundColor: '#eaf2f8', padding: '8px 12px', borderRadius: '6px',
                 marginBottom: '14px', fontSize: '12px', textAlign: 'center'
               }}>
-                Bags: <b>{selectedEntry.bags}</b> | Pkg: <b>{selectedEntry.packaging || '75'} Kg</b> | Party: <b>{selectedEntry.partyName}</b> | <b>{selectedEntry.location}</b> | <b>{selectedEntry.variety}</b>
+                Bags: <b>{selectedEntry.bags?.toLocaleString('en-IN')}</b> | Pkg: <b>{selectedEntry.packaging || '75'} Kg</b> | Party: <b>{selectedEntry.partyName}</b> | <b>{selectedEntry.location}</b> | <b>{selectedEntry.variety}</b>
               </div>
 
               <form onSubmit={handleSubmitOffer}>
@@ -810,7 +861,7 @@ const FinalReport: React.FC = () => {
                             onChange={() => setOfferData({ ...offerData, egbType: 'mill', egbValue: '0' })} />
                           <span style={{ fontWeight: '600', color: '#2e7d32' }}>Mill</span>
                         </label>
-                        <label style={{ ...radioLabelStyle, padding: '4px 10px', borderRadius: '4px', border: offerData.egbType === 'purchase' ? '2px solid #e67e22' : '1px solid #ddd', backgroundColor: offerData.egbType === 'purchase' ? '#fff3e0' : 'transparent' }}>
+                        <label style={{ ...radioLabelStyle, padding: '4px 10px', borderRadius: '4px', border: offerData.egbType === 'purchase' ? '2px solid #e67e22' : '1px solid #ddd', backgroundColor: offerData.egbType === 'purchase' ? '#ffe0b2' : 'transparent' }}>
                           <input type="radio" name="offerEgbType" checked={offerData.egbType === 'purchase'}
                             onChange={() => setOfferData({ ...offerData, egbType: 'purchase', egbValue: '' })} />
                           <span style={{ fontWeight: '600', color: '#e67e22' }}>Purchase</span>
@@ -883,7 +934,7 @@ const FinalReport: React.FC = () => {
                 backgroundColor: '#e8f8f5', padding: '8px 12px', borderRadius: '6px',
                 marginBottom: '14px', fontSize: '12px', textAlign: 'center'
               }}>
-                Bags: <b>{selectedEntry.bags}</b> | Pkg: <b>{selectedEntry.packaging || '75'} Kg</b> | Party: <b>{selectedEntry.partyName}</b> | <b>{selectedEntry.location}</b> | <b>{selectedEntry.variety}</b>
+                Bags: <b>{selectedEntry.bags?.toLocaleString('en-IN')}</b> | Pkg: <b>{selectedEntry.packaging || '75'} Kg</b> | Party: <b>{selectedEntry.partyName}</b> | <b>{selectedEntry.location}</b> | <b>{selectedEntry.variety}</b>
               </div>
 
               <form onSubmit={handleSubmitFinal}>
@@ -1009,7 +1060,7 @@ const FinalReport: React.FC = () => {
                               onChange={() => setFinalData({ ...finalData, egbType: 'mill', egbValue: '0' })} />
                             <span style={{ fontWeight: '600', color: '#2e7d32' }}>Mill</span>
                           </label>
-                          <label style={{ ...radioLabelStyle, padding: '4px 10px', borderRadius: '4px', border: finalData.egbType === 'purchase' ? '2px solid #e67e22' : '1px solid #ddd', backgroundColor: finalData.egbType === 'purchase' ? '#fff3e0' : 'transparent' }}>
+                          <label style={{ ...radioLabelStyle, padding: '4px 10px', borderRadius: '4px', border: finalData.egbType === 'purchase' ? '2px solid #e67e22' : '1px solid #ddd', backgroundColor: finalData.egbType === 'purchase' ? '#ffe0b2' : 'transparent' }}>
                             <input type="radio" name="finalEgbType" checked={finalData.egbType === 'purchase'}
                               onChange={() => setFinalData({ ...finalData, egbType: 'purchase', egbValue: '' })} />
                             <span style={{ fontWeight: '600', color: '#e67e22' }}>Purchase</span>

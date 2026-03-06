@@ -24,7 +24,12 @@ class SampleEntryService {
       }
 
       // Set initial workflow status
-      entryData.workflowStatus = 'STAFF_ENTRY';
+      // Rice samples skip quality check and go straight to cooking report
+      if (entryData.entryType === 'RICE_SAMPLE') {
+        entryData.workflowStatus = 'COOKING_REPORT';
+      } else {
+        entryData.workflowStatus = 'STAFF_ENTRY';
+      }
       entryData.createdByUserId = userId;
 
       // Create sample entry

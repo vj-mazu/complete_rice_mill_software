@@ -36,7 +36,13 @@ const User = sequelize.define('User', {
     type: DataTypes.STRING(20),
     allowNull: true,
     defaultValue: null,
-    comment: 'mill or location - only for staff role'
+    comment: 'mill or location - only for paddy_supervisor role'
+  },
+  qualityName: {
+    type: DataTypes.STRING(100),
+    allowNull: true,
+    defaultValue: null,
+    comment: 'Quality name for quality_supervisor role'
   }
 }, {
   tableName: 'users',

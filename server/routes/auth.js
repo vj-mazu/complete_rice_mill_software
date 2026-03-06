@@ -15,13 +15,26 @@ router.post('/login', async (req, res) => {
       return res.status(400).json({ error: 'Username and password are required' });
     }
 
-    // Find user
-    const user = await User.findOne({
-      where: {
-        username: username.toLowerCase(),
-        isActive: true
-      }
-    });
+    // Find user - use explicit attributes to avoid missing column errors
+    let user;
+    try {
+      user = await User.findOne({
+        where: {
+          username: username.toLowerCase(),
+          isActive: true
+        },
+        attributes: ['id', 'username', 'password', 'role', 'staffType']
+      });
+    } catch (findErr) {
+      // Fallback: try without staffType if column doesn't exist
+      user = await User.findOne({
+        where: {
+          username: username.toLowerCase(),
+          isActive: true
+        },
+        attributes: ['id', 'username', 'password', 'role']
+      });
+    }
 
     if (!user) {
       return res.status(401).json({ error: 'Invalid credentials' });
@@ -38,7 +51,8 @@ router.post('/login', async (req, res) => {
       {
         userId: user.id,
         username: user.username,
-        role: user.role
+        role: user.role,
+        staffType: user.staffType || null
       },
       process.env.JWT_SECRET,
       { expiresIn: process.env.JWT_EXPIRES_IN }

@@ -225,12 +225,12 @@ const AssigningSupervisor: React.FC = () => {
                   <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: '12px', tableLayout: 'auto' }}>
                     <thead>
                       <tr style={{ backgroundColor: '#4a90e2', color: 'white' }}>
-                        <th style={{ border: '1px solid #357abd', padding: '8px', fontWeight: '600', fontSize: '11px', whiteSpace: 'nowrap' }}>SL</th>
-                        <th style={{ border: '1px solid #357abd', padding: '8px', fontWeight: '600', fontSize: '11px', whiteSpace: 'nowrap' }}>Bags</th>
-                        <th style={{ border: '1px solid #357abd', padding: '8px', fontWeight: '600', fontSize: '11px', whiteSpace: 'nowrap' }}>Pkg</th>
-                        <th style={{ border: '1px solid #357abd', padding: '8px', fontWeight: '600', fontSize: '11px', whiteSpace: 'nowrap' }}>Party</th>
-                        <th style={{ border: '1px solid #357abd', padding: '8px', fontWeight: '600', fontSize: '11px', whiteSpace: 'nowrap' }}>Paddy Location</th>
-                        <th style={{ border: '1px solid #357abd', padding: '8px', fontWeight: '600', fontSize: '11px', whiteSpace: 'nowrap' }}>Variety</th>
+                        <th style={{ border: '1px solid #357abd', padding: '8px', fontWeight: '600', fontSize: '11px', whiteSpace: 'nowrap', textAlign: 'center' }}>SL</th>
+                        <th style={{ border: '1px solid #357abd', padding: '8px', fontWeight: '600', fontSize: '11px', whiteSpace: 'nowrap', textAlign: 'center' }}>Bags</th>
+                        <th style={{ border: '1px solid #357abd', padding: '8px', fontWeight: '600', fontSize: '11px', whiteSpace: 'nowrap', textAlign: 'center' }}>Pkg</th>
+                        <th style={{ border: '1px solid #357abd', padding: '8px', fontWeight: '600', fontSize: '11px', whiteSpace: 'nowrap', textAlign: 'left' }}>Party</th>
+                        <th style={{ border: '1px solid #357abd', padding: '8px', fontWeight: '600', fontSize: '11px', whiteSpace: 'nowrap', textAlign: 'left' }}>Paddy Location</th>
+                        <th style={{ border: '1px solid #357abd', padding: '8px', fontWeight: '600', fontSize: '11px', whiteSpace: 'nowrap', textAlign: 'left' }}>Variety</th>
                         <th style={{ border: '1px solid #357abd', padding: '8px', fontWeight: '600', fontSize: '11px', whiteSpace: 'nowrap' }}>Select Supervisor</th>
                         <th style={{ border: '1px solid #357abd', padding: '8px', fontWeight: '600', fontSize: '11px', whiteSpace: 'nowrap' }}>Actions</th>
                       </tr>
@@ -250,9 +250,9 @@ const AssigningSupervisor: React.FC = () => {
                             <td style={{ border: '1px solid #ddd', padding: '6px', textAlign: 'center', fontSize: '11px', fontWeight: '600', whiteSpace: 'nowrap' }}>{index + 1}</td>
                             <td style={{ border: '1px solid #ddd', padding: '6px', textAlign: 'center', fontSize: '11px', whiteSpace: 'nowrap' }}>{entry.bags}</td>
                             <td style={{ border: '1px solid #ddd', padding: '6px', textAlign: 'center', fontSize: '11px', whiteSpace: 'nowrap' }}>75 Kg</td>
-                            <td style={{ border: '1px solid #ddd', padding: '6px', textAlign: 'center', fontSize: '11px', whiteSpace: 'nowrap' }}>{entry.partyName}</td>
-                            <td style={{ border: '1px solid #ddd', padding: '6px', textAlign: 'center', fontSize: '11px', whiteSpace: 'nowrap' }}>{entry.location}</td>
-                            <td style={{ border: '1px solid #ddd', padding: '6px', textAlign: 'center', fontSize: '11px', whiteSpace: 'nowrap' }}>{entry.variety}</td>
+                            <td style={{ border: '1px solid #ddd', padding: '6px', textAlign: 'left', fontSize: '11px', whiteSpace: 'nowrap' }}>{entry.partyName}</td>
+                            <td style={{ border: '1px solid #ddd', padding: '6px', textAlign: 'left', fontSize: '11px', whiteSpace: 'nowrap' }}>{entry.location}</td>
+                            <td style={{ border: '1px solid #ddd', padding: '6px', textAlign: 'left', fontSize: '11px', whiteSpace: 'nowrap' }}>{entry.variety}</td>
                             <td style={{ border: '1px solid #ddd', padding: '6px' }}>
                               {needsFill ? (
                                 <div style={{ textAlign: 'center' }}>

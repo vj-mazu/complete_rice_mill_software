@@ -17,14 +17,14 @@ const WORKFLOW_TRANSITIONS = [
   {
     fromStatus: 'STAFF_ENTRY',
     toStatus: 'QUALITY_CHECK',
-    allowedRoles: ['staff', 'quality_supervisor'],
+    allowedRoles: ['staff', 'quality_supervisor', 'admin', 'manager', 'owner'],
     requiredData: []
   },
   // Quality Supervisor adds quality params and moves to next step
   {
     fromStatus: 'STAFF_ENTRY',
     toStatus: 'QUALITY_CHECK',
-    allowedRoles: ['quality_supervisor'],
+    allowedRoles: ['quality_supervisor', 'admin', 'manager', 'owner'],
     requiredData: ['qualityParameters']
   },
   {
@@ -71,6 +71,12 @@ const WORKFLOW_TRANSITIONS = [
   },
   {
     fromStatus: 'COOKING_REPORT',
+    toStatus: 'LOT_SELECTION',
+    allowedRoles: ['admin', 'manager'],
+    requiredData: ['cookingReport']
+  },
+  {
+    fromStatus: 'COOKING_REPORT',
     toStatus: 'FINAL_REPORT',
     allowedRoles: ['admin', 'manager'],
     requiredData: ['cookingReport']
@@ -78,6 +84,12 @@ const WORKFLOW_TRANSITIONS = [
   {
     fromStatus: 'COOKING_REPORT',
     toStatus: 'FAILED',
+    allowedRoles: ['admin', 'manager'],
+    requiredData: ['cookingReport']
+  },
+  {
+    fromStatus: 'FINAL_REPORT',
+    toStatus: 'LOT_SELECTION',
     allowedRoles: ['admin', 'manager'],
     requiredData: ['cookingReport']
   },

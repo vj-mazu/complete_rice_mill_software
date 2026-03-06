@@ -58,6 +58,14 @@ const EntryRow: React.FC<{
 
   const rowBg = entry.workflowStatus === 'FAILED' ? '#fde8e8' : entry.workflowStatus === 'COMPLETED' ? '#f0f9ff' : (index % 2 === 0 ? '#f7f8fa' : '#ffffff');
 
+  const fmt = (v: any, forceDecimal = false) => {
+    if (v == null || v === '') return '-';
+    const n = Number(v);
+    if (isNaN(n) || n === 0) return '-';
+    if (forceDecimal) return n.toFixed(1);
+    return n % 1 === 0 ? String(Math.round(n)) : String(parseFloat(n.toFixed(2)));
+  };
+
   return (
     <React.Fragment>
       <tr style={{ backgroundColor: rowBg, fontWeight: hasMultipleLorries ? 600 : 'normal' }}>
@@ -70,7 +78,7 @@ const EntryRow: React.FC<{
         <td style={{ ...cellStyle, fontWeight: 700 }}>{entry.variety}</td>
         <td style={cellStyle}>{entry.partyName}</td>
         <td style={cellStyle}>{entry.location}</td>
-        <td style={{ ...cellStyle, textAlign: 'center' }}>{entry.bags}</td>
+        <td style={{ ...cellStyle, textAlign: 'center' }}>{entry.bags?.toLocaleString('en-IN')}</td>
         <td style={{ ...cellStyle, whiteSpace: 'nowrap', fontStyle: hasMultipleLorries ? 'italic' : 'normal' }}>
           {hasMultipleLorries ? `${inspections.length} trips` : (lorryNumbers || entry.lorryNumber || '-')}
         </td>
@@ -83,16 +91,16 @@ const EntryRow: React.FC<{
             {entry.workflowStatus.replace(/_/g, ' ').toLowerCase().replace(/\b\w/g, (c: string) => c.toUpperCase())}
           </span>
         </td>
-        <td style={{ ...cellStyle, textAlign: 'center' }}>{entry.qualityParameters?.moisture || '-'}</td>
-        <td style={{ ...cellStyle, textAlign: 'center' }}>{entry.qualityParameters?.cutting1 && entry.qualityParameters?.cutting2 ? `${entry.qualityParameters.cutting1}x${entry.qualityParameters.cutting2}` : (entry.qualityParameters?.cutting1 || '-')}</td>
-        <td style={{ ...cellStyle, textAlign: 'center' }}>{entry.qualityParameters?.bend || '-'}</td>
-        <td style={{ ...cellStyle, textAlign: 'center' }}>{entry.qualityParameters?.mixS || '-'}</td>
-        <td style={{ ...cellStyle, textAlign: 'center' }}>{entry.qualityParameters?.mixL || '-'}</td>
-        <td style={{ ...cellStyle, textAlign: 'center' }}>{entry.qualityParameters?.mix || '-'}</td>
-        <td style={{ ...cellStyle, textAlign: 'center' }}>{entry.qualityParameters?.kandu || '-'}</td>
-        <td style={{ ...cellStyle, textAlign: 'center' }}>{entry.qualityParameters?.oil || '-'}</td>
-        <td style={{ ...cellStyle, textAlign: 'center' }}>{entry.qualityParameters?.sk || '-'}</td>
-        <td style={{ ...cellStyle, textAlign: 'center' }}>{entry.qualityParameters?.grainsCount || '-'}</td>
+        <td style={{ ...cellStyle, textAlign: 'center' }}>{fmt(entry.qualityParameters?.moisture)}</td>
+        <td style={{ ...cellStyle, textAlign: 'center' }}>{entry.qualityParameters?.cutting1 && entry.qualityParameters?.cutting2 ? `${fmt(entry.qualityParameters.cutting1, true)}x${fmt(entry.qualityParameters.cutting2, true)}` : (fmt(entry.qualityParameters?.cutting1, true))}</td>
+        <td style={{ ...cellStyle, textAlign: 'center' }}>{fmt(entry.qualityParameters?.bend, true)}</td>
+        <td style={{ ...cellStyle, textAlign: 'center' }}>{fmt(entry.qualityParameters?.mixS)}</td>
+        <td style={{ ...cellStyle, textAlign: 'center' }}>{fmt(entry.qualityParameters?.mixL)}</td>
+        <td style={{ ...cellStyle, textAlign: 'center' }}>{fmt(entry.qualityParameters?.mix)}</td>
+        <td style={{ ...cellStyle, textAlign: 'center' }}>{fmt(entry.qualityParameters?.kandu)}</td>
+        <td style={{ ...cellStyle, textAlign: 'center' }}>{fmt(entry.qualityParameters?.oil)}</td>
+        <td style={{ ...cellStyle, textAlign: 'center' }}>{fmt(entry.qualityParameters?.sk)}</td>
+        <td style={{ ...cellStyle, textAlign: 'center' }}>{fmt(entry.qualityParameters?.grainsCount)}</td>
         <td style={{ ...cellStyle, textAlign: 'center' }}>{entry.qualityParameters?.wbR || '-'}</td>
         <td style={{ ...cellStyle, textAlign: 'center' }}>{entry.qualityParameters?.wbBk || '-'}</td>
         <td style={{ ...cellStyle, textAlign: 'center' }}>{entry.qualityParameters?.wbT || '-'}</td>
@@ -105,7 +113,7 @@ const EntryRow: React.FC<{
         <td style={cellStyle}>{entry.priceType || '-'}</td>
         <td style={{ ...cellStyle, textAlign: 'right', color: '#27ae60', fontWeight: 700 }}>₹{entry.finalPrice || '-'}</td>
         <td style={cellStyle}>{entry.lotAllotment?.supervisor?.username || '-'}</td>
-        <td style={{ ...cellStyle, textAlign: 'center', fontWeight: 700 }}>{totalActualBags || '-'}</td>
+        <td style={{ ...cellStyle, textAlign: 'center', fontWeight: 700 }}>{totalActualBags?.toLocaleString('en-IN') || '-'}</td>
         <td style={{ ...cellStyle, textAlign: 'right' }}>{totalGrossWeight || '-'}</td>
         <td style={{ ...cellStyle, textAlign: 'right' }}>{totalTareWeight || '-'}</td>
         <td style={{ ...cellStyle, textAlign: 'right', fontWeight: 700 }}>{totalNetWeight || '-'}</td>
@@ -151,7 +159,7 @@ const EntryRow: React.FC<{
             <td style={{ ...cellStyle, textAlign: 'center', fontWeight: 700 }}>{trip.cutting1 && trip.cutting2 ? `${trip.cutting1}x${trip.cutting2}` : (trip.cutting1 || '-')}</td>
             <td style={{ ...cellStyle, textAlign: 'center', fontWeight: 700 }}>{trip.bend || '-'}</td>
             <td colSpan={19} style={{ ...cellStyle, textAlign: 'center', color: '#94a3b8', fontSize: '7px', fontStyle: 'italic' }}>Trip Details: {trip.remarks || 'No remarks'}</td>
-            <td style={{ ...cellStyle, textAlign: 'center', fontWeight: 700 }}>{trip.bags}</td>
+            <td style={{ ...cellStyle, textAlign: 'center', fontWeight: 700 }}>{trip.bags?.toLocaleString('en-IN')}</td>
             <td style={{ ...cellStyle, textAlign: 'right' }}>{inv?.grossWeight || '-'}</td>
             <td style={{ ...cellStyle, textAlign: 'right' }}>{inv?.tareWeight || '-'}</td>
             <td style={{ ...cellStyle, textAlign: 'right', fontWeight: 700 }}>{inv?.netWeight || '-'}</td>

@@ -1,104 +1,122 @@
-import React, { useState } from 'react';
-import AdminSampleBook from './AdminSampleBook';
+import React, { useState, useEffect } from 'react';
+import AdminSampleBook2 from './AdminSampleBook2';
 import AssigningSupervisor from './AssigningSupervisor';
 import AllottedSupervisors from './AllottedSupervisors';
 import LoadingLots from './LoadingLots';
 import CompletedLots from './CompletedLots';
+import SampleEntryPage from './SampleEntry';
+import LotSelection from './LotSelection';
+import CookingReport from './CookingReport';
+import FinalReport from './FinalReport';
+
+type TabKey = 'paddy-samples' | 'pending-lots' | 'cooking-report' | 'lots-passed' | 'loading-lots' | 'completed-lots' | 'sample-book-2' | 'assigning-supervisor' | 'allotted-supervisors';
 
 interface TabConfig {
-    id: string;
+    key: TabKey;
     label: string;
     icon: string;
+    color: string;
 }
 
 const tabs: TabConfig[] = [
-    { id: 'SAMPLE_BOOK', label: 'Sample Book', icon: '📒' },
-    { id: 'LOADING_LOTS', label: 'Loading Lots', icon: '🚛' },
-    { id: 'ALLOTTING', label: 'Pending Loading Lots (Allotting Supervisor)', icon: '👷' },
-    { id: 'ALLOTTED', label: 'Allotted Loading Supervisors', icon: '✅' },
-    { id: 'COMPLETED_LOTS', label: 'Completed Lots', icon: '🏁' },
+    { key: 'paddy-samples', label: 'Paddy Sample Records', icon: '🌾', color: '#2e7d32' },
+    { key: 'sample-book-2', label: 'Sample Book', icon: '📗', color: '#1565c0' },
+    { key: 'pending-lots', label: 'Pending (Sample Selection)', icon: '📋', color: '#3498db' },
+    { key: 'cooking-report', label: 'Cooking Book', icon: '🍚', color: '#e67e22' },
+    { key: 'lots-passed', label: 'Final Pass Lots', icon: '✅', color: '#27ae60' },
+    { key: 'loading-lots', label: 'Loading Lots', icon: '🚚', color: '#f39c12' },
+    { key: 'assigning-supervisor', label: 'Assigning (Loading)', icon: '👷', color: '#d35400' },
+    { key: 'allotted-supervisors', label: 'Allotted Supervisors', icon: '💂', color: '#2980b9' },
+    { key: 'completed-lots', label: 'Completed Lots', icon: '📦', color: '#e74c3c' },
 ];
 
 const ManagerSampleReports: React.FC = () => {
-    const [activeTab, setActiveTab] = useState('SAMPLE_BOOK');
+    const [activeTab, setActiveTab] = useState<TabKey>('paddy-samples');
 
-    const renderTab = () => {
-        switch (activeTab) {
-            case 'SAMPLE_BOOK':
-                return <AdminSampleBook />;
-            case 'ALLOTTING':
-                return <AssigningSupervisor />;
-            case 'ALLOTTED':
-                return <AllottedSupervisors />;
-            case 'LOADING_LOTS':
-                return <LoadingLots />;
-            case 'COMPLETED_LOTS':
-                return <CompletedLots />;
-            default:
-                return null;
-        }
-    };
+    useEffect(() => {
+        document.title = 'Manager Reports - Kushi Agro Foods';
+    }, []);
 
     return (
-        <div style={{ padding: '8px', width: '100%' }}>
+        <div style={{
+            padding: '0',
+            backgroundColor: '#f0f2f5',
+            minHeight: '100vh',
+            width: '100%',
+            boxSizing: 'border-box'
+        }}>
+            {/* Header */}
             <div style={{
-                background: 'linear-gradient(135deg, #2c3e50 0%, #34495e 100%)',
-                padding: '16px 24px',
-                borderRadius: '10px 10px 0 0',
-                marginBottom: 0,
-                display: 'flex',
-                alignItems: 'center',
-                gap: '10px'
+                background: 'linear-gradient(135deg, #1a1a2e 0%, #16213e 50%, #0f3460 100%)',
+                padding: '16px 20px',
+                color: 'white',
+                marginBottom: '0'
             }}>
-                <span style={{ fontSize: '22px' }}>📊</span>
-                <h2 style={{ margin: 0, color: 'white', fontSize: '18px', fontWeight: '700', letterSpacing: '0.5px' }}>
-                    Manager Sample Reports
+                <h2 style={{
+                    margin: 0,
+                    fontSize: '20px',
+                    fontWeight: '700',
+                    letterSpacing: '0.5px'
+                }}>
+                    📊 MANAGER SAMPLE RECORDS
                 </h2>
             </div>
 
             {/* Tab Navigation */}
             <div style={{
                 display: 'flex',
-                backgroundColor: '#f5f5f5',
+                gap: '0',
+                backgroundColor: 'white',
                 borderBottom: '2px solid #e0e0e0',
-                overflow: 'auto'
+                overflowX: 'auto',
+                padding: '0 8px',
+                whiteSpace: 'nowrap'
             }}>
-                {tabs.map(tab => (
-                    <button
-                        key={tab.id}
-                        onClick={() => setActiveTab(tab.id)}
-                        style={{
-                            padding: '10px 20px',
-                            border: 'none',
-                            borderBottom: activeTab === tab.id ? '3px solid #2c3e50' : '3px solid transparent',
-                            backgroundColor: activeTab === tab.id ? 'white' : 'transparent',
-                            color: activeTab === tab.id ? '#2c3e50' : '#666',
-                            fontWeight: activeTab === tab.id ? '700' : '500',
-                            fontSize: '13px',
-                            cursor: 'pointer',
-                            display: 'flex',
-                            alignItems: 'center',
-                            gap: '6px',
-                            whiteSpace: 'nowrap',
-                            transition: 'all 0.2s ease'
-                        }}
-                    >
-                        <span>{tab.icon}</span>
-                        {tab.label}
-                    </button>
-                ))}
+                {tabs.map(tab => {
+                    const isActive = activeTab === tab.key;
+                    return (
+                        <button
+                            key={tab.key}
+                            onClick={() => setActiveTab(tab.key)}
+                            style={{
+                                padding: '12px 16px',
+                                fontSize: '13px',
+                                fontWeight: isActive ? '700' : '500',
+                                border: 'none',
+                                borderBottom: isActive ? `3px solid ${tab.color}` : '3px solid transparent',
+                                cursor: 'pointer',
+                                backgroundColor: 'transparent',
+                                color: isActive ? tab.color : '#666',
+                                transition: 'all 0.2s ease',
+                                whiteSpace: 'nowrap',
+                                display: 'flex',
+                                alignItems: 'center',
+                                gap: '6px',
+                                flexShrink: 0
+                            }}
+                        >
+                            <span>{tab.icon}</span>
+                            <span>{tab.label}</span>
+                        </button>
+                    );
+                })}
             </div>
 
             {/* Tab Content */}
             <div style={{
-                backgroundColor: 'white',
-                padding: '16px',
-                border: '1px solid #e0e0e0',
-                borderTop: 'none',
-                borderRadius: '0 0 10px 10px',
-                minHeight: '400px'
+                padding: '16px 0',
+                width: '100%',
+                boxSizing: 'border-box'
             }}>
-                {renderTab()}
+                {activeTab === 'paddy-samples' && <SampleEntryPage />}
+                {activeTab === 'pending-lots' && <LotSelection />}
+                {activeTab === 'cooking-report' && <CookingReport />}
+                {activeTab === 'lots-passed' && <FinalReport />}
+                {activeTab === 'loading-lots' && <LoadingLots />}
+                {activeTab === 'completed-lots' && <CompletedLots />}
+                {activeTab === 'sample-book-2' && <AdminSampleBook2 />}
+                {activeTab === 'assigning-supervisor' && <AssigningSupervisor />}
+                {activeTab === 'allotted-supervisors' && <AllottedSupervisors />}
             </div>
         </div>
     );

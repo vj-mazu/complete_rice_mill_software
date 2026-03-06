@@ -17,6 +17,29 @@ const CookingReport = require('../models/CookingReport');
 const User = require('../models/User');
 const { Op } = require('sequelize');
 
+// ─── Paddy Supervisors list (for Sample Collected By dropdown) ───
+router.get('/paddy-supervisors', authenticateToken, async (req, res) => {
+  try {
+    const supervisors = await User.findAll({
+      where: {
+        role: 'staff',
+        staffType: 'mill',
+        isActive: true
+      },
+      attributes: ['id', 'username'],
+      order: [['username', 'ASC']]
+    });
+
+    res.json({
+      success: true,
+      users: supervisors.map(u => ({ id: u.id, username: u.username }))
+    });
+  } catch (error) {
+    console.error('Get paddy supervisors error:', error);
+    res.status(500).json({ error: 'Failed to fetch paddy supervisors' });
+  }
+});
+
 // Staff-only: Move entry to QUALITY_CHECK without adding quality parameters
 router.post('/:id/send-to-quality', authenticateToken, async (req, res) => {
   try {
@@ -81,7 +104,8 @@ router.get('/by-role', authenticateToken, async (req, res) => {
       party,
       location,
       page: page ? parseInt(page) : 1,
-      pageSize: pageSize ? parseInt(pageSize) : 50
+      pageSize: pageSize ? parseInt(pageSize) : 50,
+      staffType: req.user.staffType || null
     };
 
     const result = await SampleEntryService.getSampleEntriesByRole(req.user.role, filters, req.user.userId);
@@ -401,44 +425,82 @@ router.post('/:id/quality-parameters', authenticateToken, async (req, res) => {
 // Update quality parameters (Admin/Manager edit)
 router.put('/:id/quality-parameters', authenticateToken, async (req, res) => {
   try {
-    const sampleEntryId = req.params.id;
+    const upload = FileUploadService.getUploadMiddleware();
 
-    // Get existing quality parameters for this entry
-    const existing = await QualityParametersService.getQualityParametersBySampleEntry(sampleEntryId);
-    if (!existing) {
-      return res.status(404).json({ error: 'Quality parameters not found for this entry' });
-    }
+    upload.single('photo')(req, res, async (err) => {
+      if (err) {
+        return res.status(400).json({ error: err.message });
+      }
 
-    // Prepare update data
-    const updates = {
-      sampleEntryId,
-      moisture: req.body.moisture !== undefined ? parseFloat(req.body.moisture) : existing.moisture,
-      cutting1: req.body.cutting1 !== undefined ? parseFloat(req.body.cutting1) : existing.cutting1,
-      cutting2: req.body.cutting2 !== undefined ? parseFloat(req.body.cutting2) : existing.cutting2,
-      bend: req.body.bend !== undefined ? parseFloat(req.body.bend) : existing.bend,
-      mixS: req.body.mixS !== undefined ? parseFloat(req.body.mixS) : existing.mixS,
-      mixL: req.body.mixL !== undefined ? parseFloat(req.body.mixL) : existing.mixL,
-      mix: req.body.mix !== undefined ? parseFloat(req.body.mix) : existing.mix,
-      kandu: req.body.kandu !== undefined ? parseFloat(req.body.kandu) : existing.kandu,
-      oil: req.body.oil !== undefined ? parseFloat(req.body.oil) : existing.oil,
-      sk: req.body.sk !== undefined ? parseFloat(req.body.sk) : existing.sk,
-      grainsCount: req.body.grainsCount !== undefined ? parseInt(req.body.grainsCount) : existing.grainsCount,
-      wbR: req.body.wbR !== undefined ? parseFloat(req.body.wbR) : existing.wbR,
-      wbBk: req.body.wbBk !== undefined ? parseFloat(req.body.wbBk) : existing.wbBk,
-      wbT: req.body.wbT !== undefined ? parseFloat(req.body.wbT) : existing.wbT,
-      paddyWb: req.body.paddyWb !== undefined ? parseFloat(req.body.paddyWb) : existing.paddyWb
-    };
+      try {
+        const sampleEntryId = req.params.id;
 
-    const updated = await QualityParametersService.updateQualityParameters(
-      existing.id,
-      updates,
-      req.user.userId
-    );
+        // Get existing quality parameters for this entry
+        const existing = await QualityParametersService.getQualityParametersBySampleEntry(sampleEntryId);
+        if (!existing) {
+          return res.status(404).json({ error: 'Quality parameters not found for this entry' });
+        }
 
-    res.json(updated);
+        const parseFloatSafe = (value, fallback) => {
+          if (value === undefined || value === null) return fallback;
+          if (value === '') return 0; // Empty string submitted via FormData means cleared/zero
+          const parsed = parseFloat(value);
+          return isNaN(parsed) ? fallback : parsed;
+        };
+
+        const parseIntSafe = (value, fallback) => {
+          if (value === undefined || value === null) return fallback;
+          if (value === '') return 0;
+          const parsed = parseInt(value);
+          return isNaN(parsed) ? fallback : parsed;
+        };
+
+        // Prepare update data
+        const updates = {
+          sampleEntryId,
+          is100Grams: req.body.is100Grams === 'true' || req.body.is100Grams === true,
+          moisture: parseFloatSafe(req.body.moisture, existing.moisture),
+          dryMoisture: parseFloatSafe(req.body.dryMoisture, existing.dryMoisture),
+          cutting1: parseFloatSafe(req.body.cutting1, existing.cutting1),
+          cutting2: parseFloatSafe(req.body.cutting2, existing.cutting2),
+          bend1: parseFloatSafe(req.body.bend1, existing.bend1),
+          bend2: parseFloatSafe(req.body.bend2, existing.bend2),
+          bend: parseFloatSafe(req.body.bend || req.body.bend1, existing.bend),
+          mixS: parseFloatSafe(req.body.mixS, existing.mixS),
+          mixL: parseFloatSafe(req.body.mixL, existing.mixL),
+          mix: parseFloatSafe(req.body.mix, existing.mix),
+          kandu: parseFloatSafe(req.body.kandu, existing.kandu),
+          oil: parseFloatSafe(req.body.oil, existing.oil),
+          sk: parseFloatSafe(req.body.sk, existing.sk),
+          grainsCount: parseIntSafe(req.body.grainsCount, existing.grainsCount),
+          wbR: parseFloatSafe(req.body.wbR, existing.wbR),
+          wbBk: parseFloatSafe(req.body.wbBk, existing.wbBk),
+          wbT: parseFloatSafe(req.body.wbT, existing.wbT),
+          paddyWb: parseFloatSafe(req.body.paddyWb, existing.paddyWb)
+        };
+
+        // Handle photo upload if present
+        if (req.file) {
+          const uploadResult = await FileUploadService.uploadFile(req.file, { compress: true });
+          updates.uploadFileUrl = uploadResult.fileUrl;
+        }
+
+        const updated = await QualityParametersService.updateQualityParameters(
+          existing.id,
+          updates,
+          req.user.userId,
+          req.user.role
+        );
+
+        res.json(updated);
+      } catch (innerError) {
+        console.error('Error in quality parameters update logic:', innerError);
+        res.status(400).json({ error: innerError.message });
+      }
+    });
   } catch (error) {
-    console.error('Error updating quality parameters:', error);
-    res.status(400).json({ error: error.message });
+    console.error('Error setting up file upload or updating quality parameters:', error);
+    res.status(500).json({ error: error.message });
   }
 });
 

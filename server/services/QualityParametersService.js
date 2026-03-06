@@ -28,7 +28,8 @@ class QualityParametersService {
       // Log audit trail
       await AuditService.logCreate(userId, 'quality_parameters', quality.id, quality);
 
-      // Transition workflow to QUALITY_CHECK (from STAFF_ENTRY)
+      // Transition workflow to QUALITY_CHECK (from STAFF_ENTRY) — for both 100-gms and full quality saves
+      // so that 100-gms entries also appear in Pending (Sample Selection)
       await WorkflowEngine.transitionTo(
         qualityData.sampleEntryId,
         'QUALITY_CHECK',
@@ -61,7 +62,7 @@ class QualityParametersService {
    * @param {number} userId - User ID performing the update
    * @returns {Promise<Object|null>} Updated quality parameters or null
    */
-  async updateQualityParameters(id, updates, userId) {
+  async updateQualityParameters(id, updates, userId, userRole) {
     try {
       // Get current quality parameters
       const current = await QualityParametersRepository.findBySampleEntryId(updates.sampleEntryId);
@@ -86,6 +87,22 @@ class QualityParametersService {
         current,
         updated
       );
+
+      // If upgrading from 100g to full quality (is100Grams=false), transition workflow
+      if (!updates.is100Grams && userRole) {
+        try {
+          await WorkflowEngine.transitionTo(
+            updates.sampleEntryId,
+            'QUALITY_CHECK',
+            userId,
+            userRole,
+            { qualityParametersId: id }
+          );
+        } catch (wfErr) {
+          // Workflow transition may fail if already at QUALITY_CHECK or beyond — that's ok
+          console.log('Workflow transition note:', wfErr.message);
+        }
+      }
 
       return updated;
 

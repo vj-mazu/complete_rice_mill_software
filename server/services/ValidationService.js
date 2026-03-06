@@ -229,7 +229,7 @@ class ValidationService {
     }
 
     // Validate entry type if provided
-    if (entryData.entryType && !['CREATE_NEW', 'DIRECT_LOADED_VEHICLE', 'NEW_PADDY_SAMPLE', 'READY_LORRY', 'LOCATION_SAMPLE'].includes(entryData.entryType)) {
+    if (entryData.entryType && !['CREATE_NEW', 'DIRECT_LOADED_VEHICLE', 'NEW_PADDY_SAMPLE', 'READY_LORRY', 'LOCATION_SAMPLE', 'RICE_SAMPLE'].includes(entryData.entryType)) {
       errors.push('Invalid entry type');
     }
 

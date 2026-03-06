@@ -446,11 +446,11 @@ const AllottedSupervisors: React.FC = () => {
         <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: '12px', tableLayout: 'auto' }}>
           <thead>
             <tr style={{ backgroundColor: '#4a90e2', color: 'white' }}>
-              <th style={{ border: '1px solid #357abd', padding: '8px', fontWeight: '600', fontSize: '11px', whiteSpace: 'nowrap' }}>Date</th>
-              <th style={{ border: '1px solid #357abd', padding: '8px', fontWeight: '600', fontSize: '11px', whiteSpace: 'nowrap' }}>Broker</th>
-              <th style={{ border: '1px solid #357abd', padding: '8px', fontWeight: '600', fontSize: '11px', whiteSpace: 'nowrap' }}>Variety</th>
-              <th style={{ border: '1px solid #357abd', padding: '8px', fontWeight: '600', fontSize: '11px', whiteSpace: 'nowrap' }}>Party</th>
-              <th style={{ border: '1px solid #357abd', padding: '8px', fontWeight: '600', fontSize: '11px', whiteSpace: 'nowrap' }}>Location</th>
+              <th style={{ border: '1px solid #357abd', padding: '8px', fontWeight: '600', fontSize: '11px', whiteSpace: 'nowrap', textAlign: 'left' }}>Date</th>
+              <th style={{ border: '1px solid #357abd', padding: '8px', fontWeight: '600', fontSize: '11px', whiteSpace: 'nowrap', textAlign: 'left' }}>Broker</th>
+              <th style={{ border: '1px solid #357abd', padding: '8px', fontWeight: '600', fontSize: '11px', whiteSpace: 'nowrap', textAlign: 'left' }}>Variety</th>
+              <th style={{ border: '1px solid #357abd', padding: '8px', fontWeight: '600', fontSize: '11px', whiteSpace: 'nowrap', textAlign: 'left' }}>Party</th>
+              <th style={{ border: '1px solid #357abd', padding: '8px', fontWeight: '600', fontSize: '11px', whiteSpace: 'nowrap', textAlign: 'left' }}>Location</th>
               <th style={{ border: '1px solid #357abd', padding: '8px', fontWeight: '600', fontSize: '11px', textAlign: 'right', whiteSpace: 'nowrap' }}>Allotted</th>
               <th style={{ border: '1px solid #357abd', padding: '8px', fontWeight: '600', fontSize: '11px', textAlign: 'right', whiteSpace: 'nowrap' }}>Loading</th>
               <th style={{ border: '1px solid #357abd', padding: '8px', fontWeight: '600', fontSize: '11px', textAlign: 'right', whiteSpace: 'nowrap' }}>Balance</th>
@@ -502,16 +502,16 @@ const AllottedSupervisors: React.FC = () => {
                     <tr style={{
                       backgroundColor: index % 2 === 0 ? '#f9f9f9' : 'white'
                     }}>
-                      <td style={{ border: '1px solid #ddd', padding: '6px', fontSize: '11px', whiteSpace: 'nowrap' }}>
+                      <td style={{ border: '1px solid #ddd', padding: '6px', fontSize: '11px', whiteSpace: 'nowrap', textAlign: 'left' }}>
                         {entry.entryDate ? (() => {
                           const date = new Date(entry.entryDate);
                           return isNaN(date.getTime()) ? 'Invalid Date' : date.toLocaleDateString();
                         })() : 'No Date'}
                       </td>
-                      <td style={{ border: '1px solid #ddd', padding: '6px', fontSize: '11px', whiteSpace: 'nowrap' }}>{entry.brokerName}</td>
-                      <td style={{ border: '1px solid #ddd', padding: '6px', fontSize: '11px', whiteSpace: 'nowrap' }}>{entry.variety}</td>
-                      <td style={{ border: '1px solid #ddd', padding: '6px', fontSize: '11px', whiteSpace: 'nowrap' }}>{entry.partyName}</td>
-                      <td style={{ border: '1px solid #ddd', padding: '6px', fontSize: '11px', whiteSpace: 'nowrap' }}>{entry.location}</td>
+                      <td style={{ border: '1px solid #ddd', padding: '6px', fontSize: '11px', whiteSpace: 'nowrap', textAlign: 'left' }}>{entry.brokerName}</td>
+                      <td style={{ border: '1px solid #ddd', padding: '6px', fontSize: '11px', whiteSpace: 'nowrap', textAlign: 'left' }}>{entry.variety}</td>
+                      <td style={{ border: '1px solid #ddd', padding: '6px', fontSize: '11px', whiteSpace: 'nowrap', textAlign: 'left' }}>{entry.partyName}</td>
+                      <td style={{ border: '1px solid #ddd', padding: '6px', fontSize: '11px', whiteSpace: 'nowrap', textAlign: 'left' }}>{entry.location}</td>
                       <td style={{ border: '1px solid #ddd', padding: '6px', textAlign: 'right', fontSize: '11px', fontWeight: '600', color: '#10b981' }}>
                         {entry.lotAllotment?.allottedBags || entry.bags}
                       </td>

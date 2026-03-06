@@ -34,7 +34,7 @@ const CookingReport = sequelize.define('CookingReport', {
   },
   status: {
     type: DataTypes.ENUM('PASS', 'FAIL', 'RECHECK', 'MEDIUM'),
-    allowNull: false
+    allowNull: true
   },
   remarks: {
     type: DataTypes.TEXT,
@@ -51,6 +51,21 @@ const CookingReport = sequelize.define('CookingReport', {
     allowNull: true,
     defaultValue: false,
     field: 'has_remarks'
+  },
+  cookingDoneBy: {
+    type: DataTypes.TEXT,
+    allowNull: true,
+    field: 'cooking_done_by'
+  },
+  cookingApprovedBy: {
+    type: DataTypes.TEXT,
+    allowNull: true,
+    field: 'cooking_approved_by'
+  },
+  history: {
+    type: DataTypes.JSON,
+    allowNull: true,
+    defaultValue: []
   }
 }, {
   tableName: 'cooking_reports',

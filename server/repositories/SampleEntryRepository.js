@@ -69,9 +69,15 @@ class SampleEntryRepository {
       { model: User, as: 'creator', attributes: ['id', 'username'] }
     ];
 
-    // Staff only needs their own entries - no associations
-    if (role === 'staff') {
-      return baseIncludes;
+    // Staff needs quality parameters for Sample Book tab (to show 100gms / quality badges)
+    if (role === 'staff' && status !== 'COOKING_REPORT') {
+      return [
+        ...baseIncludes,
+        {
+          model: QualityParameters, as: 'qualityParameters', required: false,
+          include: [{ model: User, as: 'reportedByUser', attributes: ['id', 'username'] }]
+        }
+      ];
     }
 
     // Quality supervisor needs quality parameters
@@ -176,13 +182,16 @@ class SampleEntryRepository {
       quality_supervisor: ['STAFF_ENTRY', 'QUALITY_CHECK'],
       owner: null,
       admin: null,
-      manager: ['QUALITY_CHECK', 'LOT_SELECTION', 'COOKING_REPORT', 'FINAL_REPORT', 'LOT_ALLOTMENT', 'OWNER_FINANCIAL', 'MANAGER_FINANCIAL', 'FINAL_REVIEW'],
+      manager: null, // Manager sees all entries — same as admin
       physical_supervisor: ['LOT_ALLOTMENT', 'PHYSICAL_INSPECTION'],
       inventory_staff: ['PHYSICAL_INSPECTION', 'INVENTORY_ENTRY', 'OWNER_FINANCIAL', 'MANAGER_FINANCIAL', 'FINAL_REVIEW'],
       financial_account: ['OWNER_FINANCIAL', 'MANAGER_FINANCIAL', 'FINAL_REVIEW']
     };
 
-    if (filters.status) {
+    if (filters.status === 'COOKING_BOOK') {
+      // Only show entries currently pending cooking reports (or in RECHECK which stays in COOKING_REPORT status)
+      where.workflowStatus = 'COOKING_REPORT';
+    } else if (filters.status) {
       where.workflowStatus = filters.status;
     } else if (roleStatusMap[role] !== null && roleStatusMap[role]) {
       where.workflowStatus = roleStatusMap[role];
@@ -194,16 +203,29 @@ class SampleEntryRepository {
       if (filters.endDate) where.entryDate[Op.lte] = filters.endDate;
     }
 
-    // PERFORMANCE: Use exact match for dropdown-driven filters (broker, variety)
-    // Only use LIKE for free-text party/location search
-    if (filters.broker) where.brokerName = filters.broker;
-    if (filters.variety) where.variety = filters.variety;
+    if (filters.broker) where.brokerName = { [Op.iLike]: `%${filters.broker}%` };
+    if (filters.variety) where.variety = { [Op.iLike]: `%${filters.variety}%` };
     if (filters.party) where.partyName = { [Op.iLike]: `%${filters.party}%` };
     if (filters.location) where.location = { [Op.iLike]: `%${filters.location}%` };
 
     // PERFORMANCE: Build role-appropriate includes (avoids unnecessary JOINs)
     const activeStatus = filters.status || (roleStatusMap[role] && roleStatusMap[role].length === 1 ? roleStatusMap[role][0] : null);
-    const include = this._buildIncludesForRole(role, activeStatus);
+
+    // Determine the actual statuses to query for include building
+    const statusesToInclude = filters.status === 'COOKING_BOOK'
+      ? ['COOKING_REPORT']
+      : (activeStatus ? [activeStatus] : []);
+
+    const include = this._buildIncludesForRole(role, statusesToInclude.length > 0 ? statusesToInclude[0] : null);
+
+    // Make sure cooking report is included for COOKING_BOOK (but not required, so pending entries show up)
+    if (filters.status === 'COOKING_BOOK') {
+      const crInclude = include.find(i => i.as === 'cookingReport');
+      if (!crInclude) {
+        const { CookingReport } = require('../models');
+        include.push({ model: CookingReport, as: 'cookingReport', required: false });
+      }
+    }
 
     // Fix includes for physical_supervisor userId filtering
     if (role === 'physical_supervisor' && userId) {
@@ -213,6 +235,8 @@ class SampleEntryRepository {
         lotAllotmentInclude.required = true;
       }
     }
+
+    // Removed: Location staff restriction moved to frontend so they can view the Sample Book
 
     // Pagination
     const page = filters.page || 1;

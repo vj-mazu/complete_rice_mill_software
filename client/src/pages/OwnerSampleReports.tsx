@@ -4,9 +4,10 @@ import CookingReport from './CookingReport';
 import FinalReport from './FinalReport';
 import LoadingLots from './LoadingLots';
 import CompletedLots from './CompletedLots';
-import AdminSampleBook from './AdminSampleBook';
+import AdminSampleBook2 from './AdminSampleBook2';
+import SampleEntryPage from './SampleEntry';
 
-type TabKey = 'pending-lots' | 'cooking-report' | 'lots-passed' | 'loading-lots' | 'completed-lots' | 'sample-book';
+type TabKey = 'paddy-samples' | 'pending-lots' | 'cooking-report' | 'lots-passed' | 'loading-lots' | 'completed-lots' | 'sample-book-2';
 
 interface TabConfig {
   key: TabKey;
@@ -16,16 +17,17 @@ interface TabConfig {
 }
 
 const tabs: TabConfig[] = [
-  { key: 'sample-book', label: 'Sample Book', icon: '📖', color: '#8e44ad' },
+  { key: 'paddy-samples', label: 'Paddy Sample Records', icon: '🌾', color: '#2e7d32' },
+  { key: 'sample-book-2', label: 'Sample Book', icon: '📗', color: '#1565c0' },
   { key: 'pending-lots', label: 'Pending (Sample Selection)', icon: '📋', color: '#3498db' },
-  { key: 'cooking-report', label: 'Cooking Report', icon: '🍚', color: '#e67e22' },
+  { key: 'cooking-report', label: 'Cooking Book', icon: '🍚', color: '#e67e22' },
   { key: 'lots-passed', label: 'Final Pass Lots', icon: '✅', color: '#27ae60' },
   { key: 'loading-lots', label: 'Loading Lots', icon: '🚚', color: '#f39c12' },
   { key: 'completed-lots', label: 'Completed Lots', icon: '📦', color: '#e74c3c' },
 ];
 
 const OwnerSampleReports: React.FC = () => {
-  const [activeTab, setActiveTab] = useState<TabKey>('sample-book');
+  const [activeTab, setActiveTab] = useState<TabKey>('paddy-samples');
 
   useEffect(() => {
     document.title = 'Sample Reports - Kushi Agro Foods';
@@ -52,7 +54,7 @@ const OwnerSampleReports: React.FC = () => {
           fontWeight: '700',
           letterSpacing: '0.5px'
         }}>
-          📊 OWNER SAMPLE REPORTS
+          📊 PADDY SAMPLE RECORDS
         </h2>
       </div>
 
@@ -102,12 +104,13 @@ const OwnerSampleReports: React.FC = () => {
         width: '100%',
         boxSizing: 'border-box'
       }}>
+        {activeTab === 'paddy-samples' && <SampleEntryPage />}
         {activeTab === 'pending-lots' && <LotSelection />}
         {activeTab === 'cooking-report' && <CookingReport />}
         {activeTab === 'lots-passed' && <FinalReport />}
         {activeTab === 'loading-lots' && <LoadingLots />}
         {activeTab === 'completed-lots' && <CompletedLots />}
-        {activeTab === 'sample-book' && <AdminSampleBook />}
+        {activeTab === 'sample-book-2' && <AdminSampleBook2 />}
       </div>
     </div>
   );
