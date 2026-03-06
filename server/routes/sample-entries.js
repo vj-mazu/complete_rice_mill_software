@@ -376,6 +376,7 @@ router.post('/:id/quality-parameters', authenticateToken, async (req, res) => {
         const qualityData = {
           sampleEntryId: req.params.id,
           moisture: parseFloatSafe(req.body.moisture),
+          dryMoisture: parseFloatSafe(req.body.dryMoisture),
           cutting1: parseFloatSafe(req.body.cutting1),
           cutting2: parseFloatSafe(req.body.cutting2),
           bend: parseFloatSafe(req.body.bend || req.body.bend1), // Support both bend and bend1
