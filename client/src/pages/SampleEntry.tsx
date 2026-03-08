@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useMemo, useRef } from 'react';
 import { sampleEntryApi } from '../utils/sampleEntryApi';
 import type { SampleEntry, EntryType } from '../types/sampleEntry';
 import { useAuth } from '../contexts/AuthContext';
@@ -44,6 +44,7 @@ const SampleEntryPage: React.FC<{
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [expandedEntryId, setExpandedEntryId] = useState<number | null>(null);
   const [qualityUsers, setQualityUsers] = useState<string[]>([]);
+  const submissionLocksRef = useRef<Set<string>>(new Set());
 
   // Sample Collected By — radio state
   const [sampleCollectType, setSampleCollectType] = useState<'broker' | 'supervisor'>('broker');
@@ -51,6 +52,26 @@ const SampleEntryPage: React.FC<{
 
   // Title Case helper: first letter capital, rest small
   const toTitleCase = (str: string) => str.toLowerCase().replace(/(?:^|\s)\S/g, c => c.toUpperCase());
+  const isRiceQualityEntry = filterEntryType === 'RICE_SAMPLE' || selectedEntry?.entryType === 'RICE_SAMPLE';
+  const riceReportedByOptions = useMemo(() => {
+    if (!isRiceQualityEntry) {
+      return [];
+    }
+
+    const rawNames = [
+      ...(user?.role !== 'admin' && user?.username ? [user.username] : []),
+      ...qualityUsers,
+      ...paddySupervisors.map((supervisor) => supervisor.username)
+    ];
+
+    return Array.from(
+      new Set(
+        rawNames
+          .map((name) => (name || '').trim())
+          .filter(Boolean)
+      )
+    ).sort((left, right) => left.localeCompare(right));
+  }, [isRiceQualityEntry, paddySupervisors, qualityUsers, user?.role, user?.username]);
 
   // Filters
   const [filterDateFrom, setFilterDateFrom] = useState('');
@@ -63,6 +84,16 @@ const SampleEntryPage: React.FC<{
   const [totalPages, setTotalPages] = useState(1);
   const [totalEntries, setTotalEntries] = useState(0);
   const PAGE_SIZE = 100;
+
+  const acquireSubmissionLock = (key: string) => {
+    if (submissionLocksRef.current.has(key)) return false;
+    submissionLocksRef.current.add(key);
+    return true;
+  };
+
+  const releaseSubmissionLock = (key: string) => {
+    submissionLocksRef.current.delete(key);
+  };
 
   // Dropdown options
   const [brokers, setBrokers] = useState<string[]>([]);
@@ -188,6 +219,10 @@ const SampleEntryPage: React.FC<{
     loadDropdownData();
   }, [page]);
 
+  useEffect(() => {
+    setPage(1);
+  }, [activeTab]);
+
   const handleClearFilters = () => {
     setFilterDateFrom('');
     setFilterDateTo('');
@@ -251,12 +286,12 @@ const SampleEntryPage: React.FC<{
 
       // Fetch quality users (users who have qualityName set)
       try {
-        const usersResponse = await axios.get<{ success: boolean, users: Array<{ qualityName: string | null }> }>(`${API_URL}/admin/users`, { headers });
+        const usersResponse = await axios.get<{ success: boolean, users: Array<{ qualityName: string | null, role?: string, isActive?: boolean }> }>(`${API_URL}/admin/users`, { headers });
         if (usersResponse.data.success) {
           const qNames = usersResponse.data.users
-            .filter((u: any) => u.qualityName && u.qualityName.trim() !== '')
-            .map((u: any) => u.qualityName);
-          setQualityUsers(qNames);
+            .filter((u: any) => u.isActive !== false && u.role !== 'admin' && u.qualityName && u.qualityName.trim() !== '')
+            .map((u: any) => u.qualityName.trim());
+          setQualityUsers(Array.from(new Set(qNames)));
         }
       } catch (qErr) {
         console.log('Could not fetch quality users for dropdown');
@@ -279,12 +314,15 @@ const SampleEntryPage: React.FC<{
   // Show save confirmation before actually saving
   const handleSubmitWithConfirm = (e: React.FormEvent) => {
     e.preventDefault();
+    if (isSubmitting) return;
     setPendingSubmitEvent(e);
     setShowSaveConfirm(true);
   };
 
   const handleSubmit = async () => {
     if (isSubmitting) return;
+    const lockKey = 'entry-create';
+    if (!acquireSubmissionLock(lockKey)) return;
 
     try {
       if (!user || !user.id) {
@@ -331,6 +369,7 @@ const SampleEntryPage: React.FC<{
       showNotification(error.response?.data?.error || 'Failed to create entry', 'error');
     } finally {
       setIsSubmitting(false);
+      releaseSubmissionLock(lockKey);
     }
   };
 
@@ -362,6 +401,8 @@ const SampleEntryPage: React.FC<{
 
   const handleSaveEdit = async () => {
     if (!editingEntry || isSubmitting) return;
+    const lockKey = `entry-edit-${editingEntry.id}`;
+    if (!acquireSubmissionLock(lockKey)) return;
     try {
       setIsSubmitting(true);
       const token = localStorage.getItem('token');
@@ -385,6 +426,7 @@ const SampleEntryPage: React.FC<{
       showNotification(error.response?.data?.error || 'Failed to update entry', 'error');
     } finally {
       setIsSubmitting(false);
+      releaseSubmissionLock(lockKey);
     }
   };
 
@@ -531,6 +573,7 @@ const SampleEntryPage: React.FC<{
 
   const handleSubmitQualityParametersWithConfirm = (e: React.FormEvent) => {
     e.preventDefault();
+    if (isSubmitting) return;
     if (!qualityData.moisture) { showNotification('Moisture is required', 'error'); return; }
 
     if (selectedEntry?.entryType === 'RICE_SAMPLE') {
@@ -562,8 +605,11 @@ const SampleEntryPage: React.FC<{
   };
 
   const handleSubmitQualityParameters = async () => {
+    if (!selectedEntry || isSubmitting) return;
+    const lockKey = `quality-save-${selectedEntry.id}`;
+    if (!acquireSubmissionLock(lockKey)) return;
+
     setShowQualitySaveConfirm(false);
-    if (!selectedEntry) return;
 
     // 100g = ONLY moisture (and optionally dry moisture) entered, no other quality fields
     // Quality Complete = moisture + all other required fields filled
@@ -571,6 +617,7 @@ const SampleEntryPage: React.FC<{
     const is100GramsSave = selectedEntry.entryType === 'RICE_SAMPLE' ? false : !allQualityFieldsFilled;
 
     try {
+      setIsSubmitting(true);
       const formDataToSend = new FormData();
       formDataToSend.append('moisture', qualityData.moisture);
       formDataToSend.append('cutting1', selectedEntry.entryType === 'RICE_SAMPLE' ? qualityData.cutting1 || '0' : qualityData.cutting1 || '0');
@@ -621,6 +668,9 @@ const SampleEntryPage: React.FC<{
       loadEntries();
     } catch (error: any) {
       showNotification(error.response?.data?.error || 'Failed to save quality parameters', 'error');
+    } finally {
+      setIsSubmitting(false);
+      releaseSubmissionLock(lockKey);
     }
   };
 
@@ -855,10 +905,78 @@ const SampleEntryPage: React.FC<{
       </div >
 
       {/* Entries Table */}
-      < div style={{
+      <div className="table-container" style={{
         overflowX: 'auto',
         backgroundColor: 'white'
       }}>
+        <style>{`
+          .responsive-table {
+            width: 100%;
+            border-collapse: collapse;
+            font-size: 12px;
+            table-layout: fixed;
+            border: 1px solid #000;
+          }
+          .responsive-table th, .responsive-table td {
+            border: 1px solid #000;
+            padding: 3px 4px;
+          }
+          @media (max-width: 768px) {
+            .table-container {
+               overflowX: 'visible';
+            }
+            .responsive-table, .responsive-table thead, .responsive-table tbody, .responsive-table th, .responsive-table td, .responsive-table tr { 
+              display: block; 
+            }
+            .responsive-table thead tr { 
+              position: absolute;
+              top: -9999px;
+              left: -9999px;
+            }
+            .responsive-table tr { border: 1px solid #ccc; margin-bottom: 10px; border-radius: 6px; overflow: hidden; }
+            .responsive-table td { 
+              border: none;
+              border-bottom: 1px solid #eee; 
+              position: relative;
+              padding-left: 50% !important; 
+              text-align: right !important;
+              min-height: 28px;
+            }
+            .responsive-table td:before { 
+              position: absolute;
+              top: 4px;
+              left: 6px;
+              width: 45%; 
+              padding-right: 10px; 
+              white-space: nowrap;
+              text-align: left;
+              font-weight: 600;
+              color: #555;
+            }
+            
+            /* Label mapping for MS/RS/LS/RL variants */
+            .responsive-table td:nth-of-type(1):before { content: "SL No"; }
+            
+             /* When "Type" column is present (Paddy) */
+            .has-type-col td:nth-of-type(2):before { content: "Type"; }
+            .has-type-col td:nth-of-type(3):before { content: "Bags"; }
+            .has-type-col td:nth-of-type(4):before { content: "Pkg"; }
+            .has-type-col td:nth-of-type(5):before { content: "Party Name"; }
+            .has-type-col td:nth-of-type(6):before { content: "Location"; }
+            .has-type-col td:nth-of-type(7):before { content: "Variety"; }
+            .has-type-col td:nth-of-type(8):before { content: "Sample Reports"; }
+            .has-type-col td:nth-of-type(9):before { content: "Collected By"; }
+
+             /* When "Type" column is MISSING (Rice) */
+            .no-type-col td:nth-of-type(2):before { content: "Bags"; }
+            .no-type-col td:nth-of-type(3):before { content: "Pkg"; }
+            .no-type-col td:nth-of-type(4):before { content: "Party Name"; }
+            .no-type-col td:nth-of-type(5):before { content: "Location"; }
+            .no-type-col td:nth-of-type(6):before { content: "Variety"; }
+            .no-type-col td:nth-of-type(7):before { content: "Sample Reports"; }
+            .no-type-col td:nth-of-type(8):before { content: "Collected By"; }
+          }
+        `}</style>
         {(() => {
           const filteredEntries = entries.filter((entry) => {
             // Tab filter
@@ -967,20 +1085,20 @@ const SampleEntryPage: React.FC<{
                       }}>
                         <span style={{ fontSize: '13.5px', fontWeight: '800' }}>{brokerSeq}.</span> {toTitleCase(brokerName)}
                       </div>
-                      <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: '12px', tableLayout: 'fixed', border: '1px solid #000' }}>
+                      <table className={`responsive-table ${filterEntryType === 'RICE_SAMPLE' ? 'no-type-col' : 'has-type-col'}`}>
                         <thead>
-                          <tr style={{ background: filterEntryType === 'RICE_SAMPLE' ? 'linear-gradient(135deg, #1565c0, #0d47a1)' : 'linear-gradient(135deg, #2c3e50, #000000)', color: 'white' }}>
-                            <th style={{ border: '1px solid #000', padding: '3px 4px', fontWeight: '600', fontSize: '13px', textAlign: 'center', whiteSpace: 'nowrap', width: '3%' }}>SL No</th>
+                          <tr style={{ backgroundColor: filterEntryType === 'RICE_SAMPLE' ? '#4a148c' : '#1a237e', color: 'white' }}>
+                            <th style={{ fontWeight: '600', fontSize: '13px', textAlign: 'center', whiteSpace: 'nowrap', width: '3%' }}>SL No</th>
                             {filterEntryType !== 'RICE_SAMPLE' && (
-                              <th style={{ border: '1px solid #000', padding: '3px 4px', fontWeight: '600', fontSize: '13px', textAlign: 'center', whiteSpace: 'nowrap', width: '4%' }}>Type</th>
+                              <th style={{ fontWeight: '600', fontSize: '13px', textAlign: 'center', whiteSpace: 'nowrap', width: '4%' }}>Type</th>
                             )}
-                            <th style={{ border: '1px solid #000', padding: '3px 4px', fontWeight: '600', fontSize: '13px', textAlign: 'center', whiteSpace: 'nowrap', width: '6%' }}>Bags</th>
-                            <th style={{ border: '1px solid #000', padding: '3px 4px', fontWeight: '600', fontSize: '13px', textAlign: 'center', whiteSpace: 'nowrap', width: '6%' }}>Pkg</th>
-                            <th style={{ border: '1px solid #000', padding: '3px 4px', fontWeight: '600', fontSize: '13px', textAlign: 'left', whiteSpace: 'nowrap', width: '16%' }}>Party Name</th>
-                            <th style={{ border: '1px solid #000', padding: '3px 4px', fontWeight: '600', fontSize: '13px', textAlign: 'left', whiteSpace: 'nowrap', width: '14%' }}>{filterEntryType === 'RICE_SAMPLE' ? 'Rice Location' : 'Paddy Location'}</th>
-                            <th style={{ border: '1px solid #000', padding: '3px 4px', fontWeight: '600', fontSize: '13px', textAlign: 'left', whiteSpace: 'nowrap', width: '12%' }}>Variety</th>
-                            <th style={{ border: '1px solid #000', padding: '3px 4px', fontWeight: '600', fontSize: '13px', textAlign: 'left', whiteSpace: 'nowrap', width: '25%' }}>Sample Reports</th>
-                            <th style={{ border: '1px solid #000', padding: '3px 4px', fontWeight: '600', fontSize: '13px', textAlign: 'left', whiteSpace: 'nowrap', width: '14%' }}>Sample Collected By</th>
+                            <th style={{ fontWeight: '600', fontSize: '13px', textAlign: 'center', whiteSpace: 'nowrap', width: '6%' }}>Bags</th>
+                            <th style={{ fontWeight: '600', fontSize: '13px', textAlign: 'center', whiteSpace: 'nowrap', width: '6%' }}>Pkg</th>
+                            <th style={{ fontWeight: '600', fontSize: '13px', textAlign: 'left', whiteSpace: 'nowrap', width: '16%' }}>Party Name</th>
+                            <th style={{ fontWeight: '600', fontSize: '13px', textAlign: 'left', whiteSpace: 'nowrap', width: '14%' }}>{filterEntryType === 'RICE_SAMPLE' ? 'Rice Location' : 'Paddy Location'}</th>
+                            <th style={{ fontWeight: '600', fontSize: '13px', textAlign: 'left', whiteSpace: 'nowrap', width: '12%' }}>Variety</th>
+                            <th style={{ fontWeight: '600', fontSize: '13px', textAlign: 'left', whiteSpace: 'nowrap', width: '25%' }}>Sample Reports</th>
+                            <th style={{ fontWeight: '600', fontSize: '13px', textAlign: 'left', whiteSpace: 'nowrap', width: '14%' }}>Sample Collected By</th>
                           </tr>
                         </thead>
                         <tbody>
@@ -1001,28 +1119,28 @@ const SampleEntryPage: React.FC<{
 
                             return (
                               <tr key={entry.id} style={{ backgroundColor: entry.entryType === 'DIRECT_LOADED_VEHICLE' ? '#e3f2fd' : entry.entryType === 'LOCATION_SAMPLE' ? '#ffcc80' : '#ffffff' }}>
-                                <td style={{ border: '1px solid #000', padding: '1px 4px', textAlign: 'center', fontWeight: '700', fontSize: '13px', verticalAlign: 'middle' }}>{slNo}</td>
+                                <td style={{ padding: '1px 4px', textAlign: 'center', fontWeight: '700', fontSize: '13px', verticalAlign: 'middle' }}>{slNo}</td>
                                 {filterEntryType !== 'RICE_SAMPLE' && (
-                                  <td style={{ border: '1px solid #000', padding: '1px 4px', textAlign: 'center', fontSize: '11px', fontWeight: '700', lineHeight: '1.2', color: entry.entryType === 'DIRECT_LOADED_VEHICLE' ? '#1565c0' : entry.entryType === 'LOCATION_SAMPLE' ? '#e65100' : entry.entryType === 'RICE_SAMPLE' ? '#2e7d32' : '#333' }}>{entry.entryType === 'DIRECT_LOADED_VEHICLE' ? 'RL' : entry.entryType === 'LOCATION_SAMPLE' ? 'LS' : entry.entryType === 'RICE_SAMPLE' ? 'RS' : 'MS'}</td>
+                                  <td style={{ padding: '1px 4px', textAlign: 'center', fontSize: '11px', fontWeight: '700', lineHeight: '1.2', color: entry.entryType === 'DIRECT_LOADED_VEHICLE' ? '#1565c0' : entry.entryType === 'LOCATION_SAMPLE' ? '#e65100' : entry.entryType === 'RICE_SAMPLE' ? '#2e7d32' : '#333' }}>{entry.entryType === 'DIRECT_LOADED_VEHICLE' ? 'RL' : entry.entryType === 'LOCATION_SAMPLE' ? 'LS' : entry.entryType === 'RICE_SAMPLE' ? 'RS' : 'MS'}</td>
                                 )}
-                                <td style={{ border: '1px solid #000', padding: '1px 4px', textAlign: 'center', fontSize: '13px', fontWeight: '600', lineHeight: '1.2' }}>{entry.bags?.toLocaleString('en-IN') || '0'}</td>
-                                <td style={{ border: '1px solid #000', padding: '1px 4px', textAlign: 'center', fontSize: '13px', lineHeight: '1.2' }}>{(() => {
+                                <td style={{ padding: '1px 4px', textAlign: 'center', fontSize: '13px', fontWeight: '600', lineHeight: '1.2' }}>{entry.bags?.toLocaleString('en-IN') || '0'}</td>
+                                <td style={{ padding: '1px 4px', textAlign: 'center', fontSize: '13px', lineHeight: '1.2' }}>{(() => {
                                   let pkg = String((entry as any).packaging || '75');
                                   if (pkg.toLowerCase() === '0' || pkg.toLowerCase() === 'loose') return 'Loose';
                                   if (pkg.toLowerCase().includes('kg')) return pkg;
                                   if (pkg.toLowerCase().includes('tons')) return pkg;
                                   return `${pkg} Kg`;
                                 })()}</td>
-                                <td style={{ border: '1px solid #000', padding: '1px 4px', textAlign: 'left', fontSize: '14px', lineHeight: '1.2', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{toTitleCase(entry.partyName)}{entry.entryType === 'DIRECT_LOADED_VEHICLE' && (entry as any).lorryNumber ? <div style={{ fontSize: '13px', color: '#1565c0', fontWeight: '600' }}>{((entry as any).lorryNumber).toUpperCase()}</div> : ''}</td>
-                                <td style={{ border: '1px solid #000', padding: '1px 4px', textAlign: 'left', fontSize: '14px', lineHeight: '1.2', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{toTitleCase(entry.location)}</td>
+                                <td style={{ padding: '1px 4px', textAlign: 'left', fontSize: '14px', lineHeight: '1.2', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{toTitleCase(entry.partyName)}{entry.entryType === 'DIRECT_LOADED_VEHICLE' && (entry as any).lorryNumber ? <div style={{ fontSize: '13px', color: '#1565c0', fontWeight: '600' }}>{((entry as any).lorryNumber).toUpperCase()}</div> : ''}</td>
+                                <td style={{ padding: '1px 4px', textAlign: 'left', fontSize: '14px', lineHeight: '1.2', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{toTitleCase(entry.location)}</td>
 
-                                <td style={{ border: '1px solid #000', padding: '1px 4px', textAlign: 'left', fontSize: '14px', lineHeight: '1.2', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+                                <td style={{ padding: '1px 4px', textAlign: 'left', fontSize: '14px', lineHeight: '1.2', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
                                   {toTitleCase(entry.variety)}
                                   {hasQuality && <span style={{ marginLeft: '3px', color: '#27ae60', fontSize: '11px' }} title="Quality Completed">✅</span>}
                                   {has100Grams && <span style={{ marginLeft: '3px', color: '#e65100', fontSize: '11px' }} title="100g Completed">⚡</span>}
                                 </td>
-                                <td style={{ border: '1px solid #000', padding: '0px 2px', textAlign: 'left', lineHeight: '1.1' }}>
-                                  <div style={{ display: 'flex', gap: '2px', justifyContent: 'flex-start', flexWrap: 'wrap', alignItems: 'center' }}>
+                                <td style={{ padding: '0px 2px', textAlign: 'left', lineHeight: '1.1' }}>
+                                  <div style={{ display: 'flex', gap: '4px', justifyContent: 'flex-start', flexWrap: 'wrap', alignItems: 'center' }}>
 
                                     {has100Grams ? (
                                       <>
@@ -1031,7 +1149,7 @@ const SampleEntryPage: React.FC<{
                                           style={{ fontSize: '11px', padding: '3px 8px', backgroundColor: '#ffeb3b', color: '#333', borderRadius: '3px', fontWeight: '700', border: '1.5px solid #f9a825', cursor: canEditQuality ? 'pointer' : 'default' }}
                                         >⚡ 100-Gms Completed</span>
                                         {canEditQuality && expandedEntryId === entry.id && (
-                                          <div style={{ width: '100%', display: 'flex', gap: '2px', marginTop: '2px' }}>
+                                          <div style={{ width: '100%', display: 'flex', gap: '4px', marginTop: '2px', justifyContent: 'flex-start' }}>
                                             <button onClick={() => handleViewEntry(entry)} title="Edit Quality" style={{ fontSize: '10px', padding: '3px 6px', backgroundColor: '#e67e22', color: 'white', border: 'none', borderRadius: '2px', cursor: 'pointer', fontWeight: '600' }}>Edit Qlty</button>
                                             <button onClick={() => handleEditEntry(entry)} title="Edit Entry" style={{ fontSize: '10px', padding: '3px 6px', backgroundColor: '#3498db', color: 'white', border: 'none', borderRadius: '2px', cursor: 'pointer', fontWeight: '600' }}>Edit</button>
                                           </div>
@@ -1056,7 +1174,7 @@ const SampleEntryPage: React.FC<{
                                         </span>
 
                                         {canEditQuality && expandedEntryId === entry.id && (
-                                          <>
+                                          <div style={{ display: 'flex', gap: '4px', justifyContent: 'flex-start' }}>
                                             <button
                                               onClick={() => handleViewEntry(entry)}
                                               title="Edit Quality Parameters"
@@ -1089,11 +1207,11 @@ const SampleEntryPage: React.FC<{
                                             >
                                               Edit
                                             </button>
-                                          </>
+                                          </div>
                                         )}
                                       </>
                                     ) : canEditQuality ? (
-                                      <>
+                                      <div style={{ display: 'flex', gap: '4px', justifyContent: 'flex-start' }}>
                                         <button
                                           onClick={() => handleNextClick()}
                                           style={{
@@ -1125,13 +1243,13 @@ const SampleEntryPage: React.FC<{
                                         >
                                           Edit
                                         </button>
-                                      </>
+                                      </div>
                                     ) : (
                                       <span style={{ fontSize: '10px', padding: '2px 6px', backgroundColor: '#f5f5f5', color: '#999', borderRadius: '3px', fontWeight: '600' }}>Pending</span>
                                     )}
                                   </div>
                                 </td>
-                                <td style={{ border: '1px solid #000', padding: '1px 8px', textAlign: 'left', fontSize: '11px', lineHeight: '1.2', verticalAlign: 'middle' }}>
+                                <td style={{ padding: '1px 8px', textAlign: 'left', fontSize: '11px', lineHeight: '1.2', verticalAlign: 'middle' }}>
                                   {entry.sampleCollectedBy ? toTitleCase(entry.sampleCollectedBy) : ((entry as any).creator?.username ? toTitleCase((entry as any).creator.username) : '-')}
                                 </td>
                               </tr>
@@ -1146,7 +1264,7 @@ const SampleEntryPage: React.FC<{
             );
           })
         })()}
-      </div >
+      </div>
 
       {/* Pagination Controls */}
       {totalPages > 1 && (
@@ -1768,13 +1886,13 @@ const SampleEntryPage: React.FC<{
                         <label style={{ display: 'block', marginBottom: '3px', fontWeight: '600', color: '#333', fontSize: '11px' }}>Rice <span style={{ color: '#e53935' }}>*</span></label>
                         <input type="text" value={qualityData.cutting}
                           onChange={(e) => handleCuttingInput(e.target.value)}
-                          style={{ width: '100%', padding: '6px', border: '1.5px solid #bbb', borderRadius: '4px', fontSize: '12px', boxSizing: 'border-box', fontWeight: '700', letterSpacing: '1px', textAlign: 'center' }} />
+                          style={{ width: '100%', padding: '6px', border: '1.5px solid #bbb', borderRadius: '4px', fontSize: '12px', boxSizing: 'border-box' }} />
                       </div>
                       <div>
                         <label style={{ display: 'block', marginBottom: '3px', fontWeight: '600', color: '#333', fontSize: '11px' }}>Bend <span style={{ color: '#e53935' }}>*</span></label>
                         <input type="text" value={qualityData.bend}
                           onChange={(e) => handleBendInput(e.target.value)}
-                          style={{ width: '100%', padding: '6px', border: '1.5px solid #bbb', borderRadius: '4px', fontSize: '12px', boxSizing: 'border-box', fontWeight: '700', letterSpacing: '1px', textAlign: 'center' }} />
+                          style={{ width: '100%', padding: '6px', border: '1.5px solid #bbb', borderRadius: '4px', fontSize: '12px', boxSizing: 'border-box' }} />
                       </div>
                       <div>
                         <label style={{ display: 'block', marginBottom: '3px', fontWeight: '600', color: '#333', fontSize: '11px' }}>Mix <span style={{ color: '#e53935' }}>*</span></label>
@@ -1827,8 +1945,8 @@ const SampleEntryPage: React.FC<{
                           onChange={(e) => setQualityData({ ...qualityData, gramsReport: e.target.value })}
                           style={{ width: '100%', padding: '6px', border: '1.5px solid #bbb', borderRadius: '4px', fontSize: '12px', boxSizing: 'border-box', backgroundColor: 'white' }}
                         >
-                          <option value="10gms">10 Grams</option>
-                          <option value="5gms">5 Grams</option>
+                          <option value="10gms">10 gms</option>
+                          <option value="5gms">5 gms</option>
                         </select>
                       </div>
 
@@ -2030,12 +2148,12 @@ const SampleEntryPage: React.FC<{
                         style={{ width: '100%', padding: '6px', border: '1.5px solid #ccc', borderRadius: '4px', fontSize: '12px', boxSizing: 'border-box', backgroundColor: '#f5f5f5', fontWeight: '600', cursor: 'not-allowed' }} />
                     ) : (
                       <select
-                        value={qualityData.reportedBy || user?.username || ''}
+                        value={isRiceQualityEntry ? (qualityData.reportedBy || riceReportedByOptions[0] || '') : (qualityData.reportedBy || user?.username || '')}
                         onChange={(e) => setQualityData({ ...qualityData, reportedBy: toTitleCase(e.target.value) })}
                         style={{ width: '100%', padding: '6px', border: '1.5px solid #bbb', borderRadius: '4px', fontSize: '12px', boxSizing: 'border-box', fontWeight: '600' }}
                       >
-                        <option value={user?.username || ''}>{user?.username || 'Unknown'}</option>
-                        {qualityUsers.map((qName, idx) => (
+                        {!isRiceQualityEntry && <option value={user?.username || ''}>{user?.username || 'Unknown'}</option>}
+                        {(isRiceQualityEntry ? riceReportedByOptions : qualityUsers).map((qName, idx) => (
                           <option key={idx} value={qName}>{toTitleCase(qName)}</option>
                         ))}
                       </select>
@@ -2049,10 +2167,12 @@ const SampleEntryPage: React.FC<{
                     style={{ padding: '8px 18px', cursor: 'pointer', backgroundColor: '#6c757d', color: 'white', border: 'none', borderRadius: '4px', fontSize: '12px', fontWeight: '600' }}
                   >Cancel</button>
                   <button type="submit"
+                    disabled={isSubmitting}
                     style={{
-                      padding: '8px 18px', cursor: 'pointer',
+                      padding: '8px 18px', cursor: isSubmitting ? 'not-allowed' : 'pointer',
                       backgroundColor: (() => {
                         const isRice = selectedEntry?.entryType === 'RICE_SAMPLE';
+                        if (isSubmitting) return '#95a5a6';
                         if (isRice) return hasExistingQualityData ? '#1565c0' : '#2e7d32';
                         const has100g = !!(qualityData.moisture && qualityData.grainsCount);
                         const allFilled = !!(has100g && qualityData.cutting1 && qualityData.cutting2 && qualityData.bend1 && qualityData.bend2 && qualityData.mix && qualityData.kandu && qualityData.oil && qualityData.sk);
@@ -2063,6 +2183,7 @@ const SampleEntryPage: React.FC<{
                     }}
                   >
                     {(() => {
+                      if (isSubmitting) return 'Saving...';
                       const isRice = selectedEntry?.entryType === 'RICE_SAMPLE';
                       const has100g = !!(qualityData.moisture && qualityData.grainsCount);
                       const allFilled = !!(has100g && qualityData.cutting1 && qualityData.cutting2 && qualityData.bend1 && qualityData.bend2 && qualityData.mix && qualityData.kandu && qualityData.oil && qualityData.sk);
@@ -2102,9 +2223,10 @@ const SampleEntryPage: React.FC<{
                 <button
                   type="button"
                   onClick={handleSubmit}
-                  style={{ padding: '8px 20px', backgroundColor: '#27ae60', color: 'white', border: 'none', borderRadius: '5px', cursor: 'pointer', fontWeight: '600', fontSize: '13px' }}
+                  disabled={isSubmitting}
+                  style={{ padding: '8px 20px', backgroundColor: isSubmitting ? '#95a5a6' : '#27ae60', color: 'white', border: 'none', borderRadius: '5px', cursor: isSubmitting ? 'not-allowed' : 'pointer', fontWeight: '600', fontSize: '13px' }}
                 >
-                  Save
+                  {isSubmitting ? 'Saving...' : 'Save'}
                 </button>
               </div>
             </div>
@@ -2136,9 +2258,10 @@ const SampleEntryPage: React.FC<{
                 <button
                   type="button"
                   onClick={handleSubmitQualityParameters}
-                  style={{ padding: '8px 20px', backgroundColor: '#27ae60', color: 'white', border: 'none', borderRadius: '5px', cursor: 'pointer', fontWeight: '600', fontSize: '13px' }}
+                  disabled={isSubmitting}
+                  style={{ padding: '8px 20px', backgroundColor: isSubmitting ? '#95a5a6' : '#27ae60', color: 'white', border: 'none', borderRadius: '5px', cursor: isSubmitting ? 'not-allowed' : 'pointer', fontWeight: '600', fontSize: '13px' }}
                 >
-                  Save
+                  {isSubmitting ? 'Saving...' : 'Save'}
                 </button>
               </div>
             </div>
@@ -2163,7 +2286,7 @@ const SampleEntryPage: React.FC<{
                   style={{ background: 'none', border: 'none', fontSize: '20px', cursor: 'pointer', color: '#999' }}>✕</button>
               </div>
 
-              <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '12px' }}>
+              <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(200px, 1fr))', gap: '12px' }}>
                 <div>
                   <label style={{ display: 'block', marginBottom: '4px', fontWeight: '500', color: '#555', fontSize: '12px' }}>Date</label>
                   <input type="date" value={formData.entryDate} onChange={(e) => setFormData({ ...formData, entryDate: e.target.value })}
@@ -2308,9 +2431,9 @@ const SampleEntryPage: React.FC<{
                   style={{ padding: '8px 16px', backgroundColor: '#6c757d', color: 'white', border: 'none', borderRadius: '4px', cursor: 'pointer', fontSize: '13px' }}>
                   Cancel
                 </button>
-                <button onClick={handleSaveEdit}
-                  style={{ padding: '8px 16px', backgroundColor: '#4a90e2', color: 'white', border: 'none', borderRadius: '4px', cursor: 'pointer', fontSize: '13px', fontWeight: '600' }}>
-                  Save Changes
+                <button onClick={handleSaveEdit} disabled={isSubmitting}
+                  style={{ padding: '8px 16px', backgroundColor: isSubmitting ? '#95a5a6' : '#4a90e2', color: 'white', border: 'none', borderRadius: '4px', cursor: isSubmitting ? 'not-allowed' : 'pointer', fontSize: '13px', fontWeight: '600' }}>
+                  {isSubmitting ? 'Saving...' : 'Save Changes'}
                 </button>
               </div>
             </div>
@@ -2342,4 +2465,3 @@ const SampleEntryPage: React.FC<{
 };
 
 export default SampleEntryPage;
-

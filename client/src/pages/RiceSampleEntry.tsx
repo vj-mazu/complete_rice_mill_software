@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useRef } from 'react';
+import React, { useState, useEffect, useRef, useMemo } from 'react';
 import { sampleEntryApi } from '../utils/sampleEntryApi';
 import type { SampleEntry, EntryType } from '../types/sampleEntry';
 import { useAuth } from '../contexts/AuthContext';
@@ -33,6 +33,7 @@ const RiceSampleEntry: React.FC<{ defaultTab?: 'RICE_SAMPLE' | 'RICE_BOOK' }> = 
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [expandedEntryId, setExpandedEntryId] = useState<number | null>(null);
   const [qualityUsers, setQualityUsers] = useState<string[]>([]);
+  const submissionLocksRef = useRef<Set<string>>(new Set());
 
   // Sample Collected By — radio state
   const [sampleCollectType, setSampleCollectType] = useState<'broker' | 'supervisor'>('broker');
@@ -40,6 +41,21 @@ const RiceSampleEntry: React.FC<{ defaultTab?: 'RICE_SAMPLE' | 'RICE_BOOK' }> = 
 
   // Title Case helper: first letter capital, rest small
   const toTitleCase = (str: string) => str.toLowerCase().replace(/(?:^|\s)\S/g, c => c.toUpperCase());
+  const riceReportedByOptions = useMemo(() => {
+    const rawNames = [
+      ...(user?.role !== 'admin' && user?.username ? [user.username] : []),
+      ...qualityUsers,
+      ...paddySupervisors.map((supervisor) => supervisor.username)
+    ];
+
+    return Array.from(
+      new Set(
+        rawNames
+          .map((name) => (name || '').trim())
+          .filter(Boolean)
+      )
+    ).sort((left, right) => left.localeCompare(right));
+  }, [paddySupervisors, qualityUsers, user?.role, user?.username]);
 
   // Filters
   const [filterDateFrom, setFilterDateFrom] = useState('');
@@ -140,6 +156,21 @@ const RiceSampleEntry: React.FC<{ defaultTab?: 'RICE_SAMPLE' | 'RICE_BOOK' }> = 
     loadDropdownData();
   }, [page]);
 
+  // Keep pagination predictable when switching Rice Sample / Rice Book tabs
+  useEffect(() => {
+    setPage(1);
+  }, [activeTab]);
+
+  const acquireSubmissionLock = (key: string) => {
+    if (submissionLocksRef.current.has(key)) return false;
+    submissionLocksRef.current.add(key);
+    return true;
+  };
+
+  const releaseSubmissionLock = (key: string) => {
+    submissionLocksRef.current.delete(key);
+  };
+
   const handleClearFilters = () => {
     setFilterDateFrom('');
     setFilterDateTo('');
@@ -197,12 +228,12 @@ const RiceSampleEntry: React.FC<{ defaultTab?: 'RICE_SAMPLE' | 'RICE_BOOK' }> = 
 
       // Fetch quality users (users who have qualityName set)
       try {
-        const usersResponse = await axios.get<{ success: boolean, users: Array<{ qualityName: string | null }> }>(`${API_URL}/admin/users`, { headers });
+        const usersResponse = await axios.get<{ success: boolean, users: Array<{ qualityName: string | null, role?: string, isActive?: boolean }> }>(`${API_URL}/admin/users`, { headers });
         if (usersResponse.data.success) {
           const qNames = usersResponse.data.users
-            .filter((u: any) => u.qualityName && u.qualityName.trim() !== '')
-            .map((u: any) => u.qualityName);
-          setQualityUsers(qNames);
+            .filter((u: any) => u.isActive !== false && u.role !== 'admin' && u.qualityName && u.qualityName.trim() !== '')
+            .map((u: any) => u.qualityName.trim());
+          setQualityUsers(Array.from(new Set(qNames)));
         }
       } catch (qErr) {
         console.log('Could not fetch quality users for dropdown');
@@ -225,12 +256,15 @@ const RiceSampleEntry: React.FC<{ defaultTab?: 'RICE_SAMPLE' | 'RICE_BOOK' }> = 
   // Show save confirmation before actually saving
   const handleSubmitWithConfirm = (e: React.FormEvent) => {
     e.preventDefault();
+    if (isSubmitting) return;
     setPendingSubmitEvent(e);
     setShowSaveConfirm(true);
   };
 
   const handleSubmit = async () => {
     if (isSubmitting) return;
+    const lockKey = 'entry-create';
+    if (!acquireSubmissionLock(lockKey)) return;
 
     try {
       if (!user || !user.id) {
@@ -278,6 +312,7 @@ const RiceSampleEntry: React.FC<{ defaultTab?: 'RICE_SAMPLE' | 'RICE_BOOK' }> = 
       showNotification(error.response?.data?.error || 'Failed to create entry', 'error');
     } finally {
       setIsSubmitting(false);
+      releaseSubmissionLock(lockKey);
     }
   };
 
@@ -310,6 +345,8 @@ const RiceSampleEntry: React.FC<{ defaultTab?: 'RICE_SAMPLE' | 'RICE_BOOK' }> = 
 
   const handleSaveEdit = async () => {
     if (!editingEntry || isSubmitting) return;
+    const lockKey = `entry-edit-${editingEntry.id}`;
+    if (!acquireSubmissionLock(lockKey)) return;
     try {
       setIsSubmitting(true);
       const token = localStorage.getItem('token');
@@ -333,6 +370,7 @@ const RiceSampleEntry: React.FC<{ defaultTab?: 'RICE_SAMPLE' | 'RICE_BOOK' }> = 
       showNotification(error.response?.data?.error || 'Failed to update entry', 'error');
     } finally {
       setIsSubmitting(false);
+      releaseSubmissionLock(lockKey);
     }
   };
 
@@ -468,6 +506,7 @@ const RiceSampleEntry: React.FC<{ defaultTab?: 'RICE_SAMPLE' | 'RICE_BOOK' }> = 
 
   const handleSubmitQualityParametersWithConfirm = (e: React.FormEvent) => {
     e.preventDefault();
+    if (isSubmitting) return;
     // All fields mandatory for Rice except toggles (Moisture, Grains Count, Broken, Rice, Bend, Mix, Kandu, Oil, SK)
     if (!qualityData.moisture) { showNotification('Moisture is required', 'error'); return; }
     if (!qualityData.grainsCount) { showNotification('Grains Count is required', 'error'); return; }
@@ -483,13 +522,17 @@ const RiceSampleEntry: React.FC<{ defaultTab?: 'RICE_SAMPLE' | 'RICE_BOOK' }> = 
   };
 
   const handleSubmitQualityParameters = async () => {
+    if (!selectedEntry || isSubmitting) return;
+    const lockKey = `quality-save-${selectedEntry.id}`;
+    if (!acquireSubmissionLock(lockKey)) return;
+
     setShowQualitySaveConfirm(false);
-    if (!selectedEntry) return;
 
     // For Rice, is100GramsSave is always false as per user request (only full quality)
     const is100GramsSave = false;
 
     try {
+      setIsSubmitting(true);
       const formDataToSend = new FormData();
       formDataToSend.append('moisture', qualityData.moisture);
       formDataToSend.append('cutting1', qualityData.cutting1 || '0');
@@ -537,6 +580,9 @@ const RiceSampleEntry: React.FC<{ defaultTab?: 'RICE_SAMPLE' | 'RICE_BOOK' }> = 
       loadEntries();
     } catch (error: any) {
       showNotification(error.response?.data?.error || 'Failed to save quality parameters', 'error');
+    } finally {
+      setIsSubmitting(false);
+      releaseSubmissionLock(lockKey);
     }
   };
 
@@ -806,7 +852,7 @@ const RiceSampleEntry: React.FC<{ defaultTab?: 'RICE_SAMPLE' | 'RICE_BOOK' }> = 
                                   {has100Grams && <span style={{ marginLeft: '3px', color: '#e65100', fontSize: '11px' }} title="100g Completed">⚡</span>}
                                 </td>
                                 <td style={{ border: '1px solid #000', padding: '0px 2px', textAlign: 'left', lineHeight: '1.1' }}>
-                                  <div style={{ display: 'flex', gap: '2px', justifyContent: 'flex-start', flexWrap: 'wrap', alignItems: 'center' }}>
+                                  <div style={{ display: 'flex', gap: '4px', justifyContent: 'flex-start', flexWrap: 'wrap', alignItems: 'center' }}>
 
                                     {has100Grams ? (
                                       <>
@@ -815,7 +861,7 @@ const RiceSampleEntry: React.FC<{ defaultTab?: 'RICE_SAMPLE' | 'RICE_BOOK' }> = 
                                           style={{ fontSize: '11px', padding: '3px 8px', backgroundColor: '#ffeb3b', color: '#333', borderRadius: '3px', fontWeight: '700', border: '1.5px solid #f9a825', cursor: canEditQuality ? 'pointer' : 'default' }}
                                         >⚡ 100-Gms Completed</span>
                                         {canEditQuality && expandedEntryId === entry.id && (
-                                          <div style={{ width: '100%', display: 'flex', gap: '2px', marginTop: '2px' }}>
+                                          <div style={{ width: '100%', display: 'flex', gap: '4px', marginTop: '2px', justifyContent: 'flex-start' }}>
                                             <button onClick={() => handleViewEntry(entry)} title="Edit Quality" style={{ fontSize: '10px', padding: '3px 6px', backgroundColor: '#e67e22', color: 'white', border: 'none', borderRadius: '2px', cursor: 'pointer', fontWeight: '600' }}>Edit Qlty</button>
                                             <button onClick={() => handleEditEntry(entry)} title="Edit Entry" style={{ fontSize: '10px', padding: '3px 6px', backgroundColor: '#3498db', color: 'white', border: 'none', borderRadius: '2px', cursor: 'pointer', fontWeight: '600' }}>Edit</button>
                                           </div>
@@ -1330,14 +1376,14 @@ const RiceSampleEntry: React.FC<{ defaultTab?: 'RICE_SAMPLE' | 'RICE_BOOK' }> = 
                     <label style={{ display: 'block', marginBottom: '3px', fontWeight: '600', color: '#333', fontSize: '11px' }}>Rice <span style={{ color: '#e53935' }}>*</span></label>
                     <input type="text" value={qualityData.cutting}
                       onChange={(e) => handleCuttingInput(e.target.value)}
-                      style={{ width: '100%', padding: '6px', border: '1.5px solid #bbb', borderRadius: '4px', fontSize: '12px', boxSizing: 'border-box', fontWeight: '700', letterSpacing: '1px', textAlign: 'center' }} />
+                      style={{ width: '100%', padding: '6px', border: '1.5px solid #bbb', borderRadius: '4px', fontSize: '12px', boxSizing: 'border-box' }} />
                   </div>
                   <div>
                     <label style={{ display: 'block', marginBottom: '3px', fontWeight: '600', color: '#333', fontSize: '11px' }}>Bend <span style={{ color: '#e53935' }}>*</span></label>
                     <input type="text" value={qualityData.bend}
                       ref={bendRef}
                       onChange={(e) => handleBendInput(e.target.value)}
-                      style={{ width: '100%', padding: '6px', border: '1.5px solid #bbb', borderRadius: '4px', fontSize: '12px', boxSizing: 'border-box', fontWeight: '700', letterSpacing: '1px', textAlign: 'center' }} />
+                      style={{ width: '100%', padding: '6px', border: '1.5px solid #bbb', borderRadius: '4px', fontSize: '12px', boxSizing: 'border-box' }} />
                   </div>
                   <div>
                     <label style={{ display: 'block', marginBottom: '3px', fontWeight: '600', color: '#333', fontSize: '11px' }}>Mix <span style={{ color: '#e53935' }}>*</span></label>
@@ -1390,8 +1436,8 @@ const RiceSampleEntry: React.FC<{ defaultTab?: 'RICE_SAMPLE' | 'RICE_BOOK' }> = 
                       onChange={(e) => setQualityData({ ...qualityData, gramsReport: e.target.value })}
                       style={{ width: '100%', padding: '6px', border: '1.5px solid #bbb', borderRadius: '4px', fontSize: '12px', boxSizing: 'border-box', backgroundColor: 'white' }}
                     >
-                      <option value="10gms">10 Grams</option>
-                      <option value="5gms">5 Grams</option>
+                      <option value="10gms">10 gms</option>
+                      <option value="5gms">5 gms</option>
                     </select>
                   </div>
 
@@ -1429,12 +1475,11 @@ const RiceSampleEntry: React.FC<{ defaultTab?: 'RICE_SAMPLE' | 'RICE_BOOK' }> = 
                         style={{ width: '100%', padding: '6px', border: '1.5px solid #ccc', borderRadius: '4px', fontSize: '12px', boxSizing: 'border-box', backgroundColor: '#f5f5f5', fontWeight: '600', cursor: 'not-allowed' }} />
                     ) : (
                       <select
-                        value={qualityData.reportedBy || user?.username || ''}
+                        value={qualityData.reportedBy || riceReportedByOptions[0] || ''}
                         onChange={(e) => setQualityData({ ...qualityData, reportedBy: toTitleCase(e.target.value) })}
                         style={{ width: '100%', padding: '6px', border: '1.5px solid #bbb', borderRadius: '4px', fontSize: '12px', boxSizing: 'border-box', fontWeight: '600' }}
                       >
-                        <option value={user?.username || ''}>{user?.username || 'Unknown'}</option>
-                        {Array.from(new Set([...qualityUsers, ...paddySupervisors.map(s => s.username)])).sort().map((qName, idx) => (
+                        {riceReportedByOptions.map((qName, idx) => (
                           <option key={idx} value={qName}>{toTitleCase(qName)}</option>
                         ))}
                       </select>
@@ -1448,10 +1493,12 @@ const RiceSampleEntry: React.FC<{ defaultTab?: 'RICE_SAMPLE' | 'RICE_BOOK' }> = 
                     style={{ padding: '8px 18px', cursor: 'pointer', backgroundColor: '#6c757d', color: 'white', border: 'none', borderRadius: '4px', fontSize: '12px', fontWeight: '600' }}
                   >Cancel</button>
                   <button type="submit"
+                    disabled={isSubmitting}
                     style={{
-                      padding: '8px 18px', cursor: 'pointer',
+                      padding: '8px 18px', cursor: isSubmitting ? 'not-allowed' : 'pointer',
                       backgroundColor: (() => {
                         // Rice specific entry page, always use green/blue and Standard labels
+                        if (isSubmitting) return '#95a5a6';
                         return hasExistingQualityData ? '#1565c0' : '#2e7d32';
                       })(),
                       color: 'white', border: 'none', borderRadius: '4px', fontSize: '12px', fontWeight: '700'
@@ -1459,6 +1506,7 @@ const RiceSampleEntry: React.FC<{ defaultTab?: 'RICE_SAMPLE' | 'RICE_BOOK' }> = 
                   >
                     {(() => {
                       // Rice specific entry page, always use Standard labels
+                      if (isSubmitting) return 'Saving...';
                       return hasExistingQualityData ? 'Update Quality' : 'Submit Quality';
                     })()}
                   </button>
@@ -1493,9 +1541,10 @@ const RiceSampleEntry: React.FC<{ defaultTab?: 'RICE_SAMPLE' | 'RICE_BOOK' }> = 
                 <button
                   type="button"
                   onClick={handleSubmit}
-                  style={{ padding: '8px 20px', backgroundColor: '#27ae60', color: 'white', border: 'none', borderRadius: '5px', cursor: 'pointer', fontWeight: '600', fontSize: '13px' }}
+                  disabled={isSubmitting}
+                  style={{ padding: '8px 20px', backgroundColor: isSubmitting ? '#95a5a6' : '#27ae60', color: 'white', border: 'none', borderRadius: '5px', cursor: isSubmitting ? 'not-allowed' : 'pointer', fontWeight: '600', fontSize: '13px' }}
                 >
-                  Save
+                  {isSubmitting ? 'Saving...' : 'Save'}
                 </button>
               </div>
             </div>
@@ -1527,9 +1576,10 @@ const RiceSampleEntry: React.FC<{ defaultTab?: 'RICE_SAMPLE' | 'RICE_BOOK' }> = 
                 <button
                   type="button"
                   onClick={handleSubmitQualityParameters}
-                  style={{ padding: '8px 20px', backgroundColor: '#27ae60', color: 'white', border: 'none', borderRadius: '5px', cursor: 'pointer', fontWeight: '600', fontSize: '13px' }}
+                  disabled={isSubmitting}
+                  style={{ padding: '8px 20px', backgroundColor: isSubmitting ? '#95a5a6' : '#27ae60', color: 'white', border: 'none', borderRadius: '5px', cursor: isSubmitting ? 'not-allowed' : 'pointer', fontWeight: '600', fontSize: '13px' }}
                 >
-                  Save
+                  {isSubmitting ? 'Saving...' : 'Save'}
                 </button>
               </div>
             </div>
@@ -1699,9 +1749,9 @@ const RiceSampleEntry: React.FC<{ defaultTab?: 'RICE_SAMPLE' | 'RICE_BOOK' }> = 
                   style={{ padding: '8px 16px', backgroundColor: '#6c757d', color: 'white', border: 'none', borderRadius: '4px', cursor: 'pointer', fontSize: '13px' }}>
                   Cancel
                 </button>
-                <button onClick={handleSaveEdit}
-                  style={{ padding: '8px 16px', backgroundColor: '#4a90e2', color: 'white', border: 'none', borderRadius: '4px', cursor: 'pointer', fontSize: '13px', fontWeight: '600' }}>
-                  Save Changes
+                <button onClick={handleSaveEdit} disabled={isSubmitting}
+                  style={{ padding: '8px 16px', backgroundColor: isSubmitting ? '#95a5a6' : '#4a90e2', color: 'white', border: 'none', borderRadius: '4px', cursor: isSubmitting ? 'not-allowed' : 'pointer', fontSize: '13px', fontWeight: '600' }}>
+                  {isSubmitting ? 'Saving...' : 'Save Changes'}
                 </button>
               </div>
             </div>
@@ -1734,4 +1784,3 @@ const RiceSampleEntry: React.FC<{ defaultTab?: 'RICE_SAMPLE' | 'RICE_BOOK' }> = 
 };
 
 export default RiceSampleEntry;
-

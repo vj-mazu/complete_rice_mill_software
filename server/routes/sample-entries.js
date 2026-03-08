@@ -380,6 +380,8 @@ router.post('/:id/quality-parameters', authenticateToken, async (req, res) => {
           return isNaN(parsed) ? 0 : parsed;
         };
 
+        const normalizeGramsReport = (value) => value === '5gms' ? '5gms' : '10gms';
+
         // Convert string values from FormData to numbers (with safe parsing)
         const qualityData = {
           sampleEntryId: req.params.id,
@@ -401,7 +403,7 @@ router.post('/:id/quality-parameters', authenticateToken, async (req, res) => {
           wbBk: parseFloatSafe(req.body.wbBk),
           wbT: parseFloatSafe(req.body.wbT),
           paddyWb: parseFloatSafe(req.body.paddyWb),
-          gramsReport: req.body.gramsReport,
+          gramsReport: normalizeGramsReport(req.body.gramsReport),
           reportedBy: req.body.reportedBy || 'Quality Supervisor',
           smixEnabled: !!(req.body.mixS && parseFloat(req.body.mixS) > 0),
           lmixEnabled: !!(req.body.mixL && parseFloat(req.body.mixL) > 0),
@@ -465,6 +467,11 @@ router.put('/:id/quality-parameters', authenticateToken, async (req, res) => {
           return isNaN(parsed) ? fallback : parsed;
         };
 
+        const normalizeGramsReport = (value, fallback) => {
+          if (value === undefined) return fallback;
+          return value === '5gms' ? '5gms' : '10gms';
+        };
+
         // Prepare update data
         const updates = {
           sampleEntryId,
@@ -487,7 +494,7 @@ router.put('/:id/quality-parameters', authenticateToken, async (req, res) => {
           wbBk: parseFloatSafe(req.body.wbBk, existing.wbBk),
           wbT: parseFloatSafe(req.body.wbT, existing.wbT),
           paddyWb: parseFloatSafe(req.body.paddyWb, existing.paddyWb),
-          gramsReport: req.body.gramsReport !== undefined ? req.body.gramsReport : existing.gramsReport
+          gramsReport: normalizeGramsReport(req.body.gramsReport, existing.gramsReport)
         };
 
         // Handle photo upload if present

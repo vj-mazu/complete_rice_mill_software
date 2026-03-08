@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useMemo } from 'react';
+import React, { useState, useEffect, useMemo, useRef } from 'react';
 import axios from 'axios';
 import { useAuth } from '../contexts/AuthContext';
 import { useNotification } from '../contexts/NotificationContext';
@@ -106,6 +106,17 @@ const FinalReport: React.FC<FinalReportProps> = ({ entryType, excludeEntryType }
   const isAdmin = (user?.role as string) === 'admin' || (user?.role as string) === 'owner';
   const isManager = user?.role === 'manager';
   const [isSubmitting, setIsSubmitting] = useState(false);
+  const submissionLocksRef = useRef<Set<string>>(new Set());
+
+  const acquireSubmissionLock = (key: string) => {
+    if (submissionLocksRef.current.has(key)) return false;
+    submissionLocksRef.current.add(key);
+    return true;
+  };
+
+  const releaseSubmissionLock = (key: string) => {
+    submissionLocksRef.current.delete(key);
+  };
 
   const [offerData, setOfferData] = useState<OfferingData>({
     offerRate: '',
@@ -335,6 +346,8 @@ const FinalReport: React.FC<FinalReportProps> = ({ entryType, excludeEntryType }
   const handleSubmitOffer = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!selectedEntry || isSubmitting) return;
+    const lockKey = `offer-submit-${selectedEntry.id}`;
+    if (!acquireSubmissionLock(lockKey)) return;
 
     try {
       setIsSubmitting(true);
@@ -375,6 +388,7 @@ const FinalReport: React.FC<FinalReportProps> = ({ entryType, excludeEntryType }
       showNotification(error.response?.data?.error || 'Failed to save offering price', 'error');
     } finally {
       setIsSubmitting(false);
+      releaseSubmissionLock(lockKey);
     }
   };
 
@@ -429,6 +443,8 @@ const FinalReport: React.FC<FinalReportProps> = ({ entryType, excludeEntryType }
   const handleSubmitFinal = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!selectedEntry || isSubmitting) return;
+    const lockKey = `final-submit-${selectedEntry.id}`;
+    if (!acquireSubmissionLock(lockKey)) return;
 
     try {
       setIsSubmitting(true);
@@ -468,6 +484,7 @@ const FinalReport: React.FC<FinalReportProps> = ({ entryType, excludeEntryType }
       showNotification(error.response?.data?.error || 'Failed to save final price', 'error');
     } finally {
       setIsSubmitting(false);
+      releaseSubmissionLock(lockKey);
     }
   };
 
@@ -582,7 +599,7 @@ const FinalReport: React.FC<FinalReportProps> = ({ entryType, excludeEntryType }
                         textAlign: 'center', letterSpacing: '0.5px'
                       }}>
                         {(() => { const d = new Date(brokerEntries[0]?.entryDate); return `${String(d.getDate()).padStart(2, '0')}-${String(d.getMonth() + 1).padStart(2, '0')}-${d.getFullYear()}`; })()}
-                        &nbsp;&nbsp;Paddy Sample
+                        &nbsp;&nbsp;{entryType === 'RICE_SAMPLE' ? 'Rice Sample' : 'Paddy Sample'}
                       </div>}
                       {/* Broker name bar */}
                       <div style={{

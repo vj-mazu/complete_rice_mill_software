@@ -161,6 +161,148 @@ const Table = styled.table`
   border-collapse: collapse;
   font-size: 0.9rem;
 
+  @media (max-width: 768px) {
+    .table-container & {
+      table, thead, tbody, th, td, tr {
+        display: block;
+      }
+      
+      thead tr {
+        position: absolute;
+        top: -9999px;
+        left: -9999px;
+      }
+
+      tr {
+        background: white;
+        border: 1px solid #e5e7eb;
+        margin-bottom: 1rem;
+        border-radius: 8px;
+        box-shadow: 0 2px 4px rgba(0,0,0,0.05);
+        overflow: hidden;
+      }
+
+      td {
+        border: none;
+        border-bottom: 1px solid #f3f4f6;
+        position: relative;
+        padding: 0.75rem !important;
+        padding-left: 45% !important;
+        text-align: right !important;
+        display: flex;
+        justify-content: flex-end;
+        align-items: center;
+        min-height: 40px;
+      }
+      
+      td:last-child {
+        border-bottom: none;
+      }
+
+      td:before {
+        position: absolute;
+        top: 50%;
+        transform: translateY(-50%);
+        left: 12px;
+        width: 40%;
+        padding-right: 10px;
+        white-space: nowrap;
+        text-align: left;
+        font-weight: 600;
+        color: #6b7280;
+        font-size: 0.85rem;
+      }
+    }
+
+    /* Arrivals Table Headers */
+    .arrivals-table & td:nth-of-type(1):before { content: "Select"; }
+    .arrivals-table & td:nth-of-type(2):before { content: "Date"; }
+    .arrivals-table & td:nth-of-type(3):before { content: "SL No"; }
+    .arrivals-table & td:nth-of-type(4):before { content: "Type"; }
+    .arrivals-table & td:nth-of-type(5):before { content: "Broker"; }
+    .arrivals-table & td:nth-of-type(6):before { content: "From"; }
+    .arrivals-table & td:nth-of-type(7):before { content: "Variety"; }
+    .arrivals-table & td:nth-of-type(8):before { content: "Bags"; }
+    .arrivals-table & td:nth-of-type(9):before { content: "Gross Wt"; }
+    .arrivals-table & td:nth-of-type(10):before { content: "Tare Wt"; }
+    .arrivals-table & td:nth-of-type(11):before { content: "Net Wt"; }
+    .arrivals-table & td:nth-of-type(12):before { content: "M%"; }
+    .arrivals-table & td:nth-of-type(13):before { content: "Cut"; }
+    .arrivals-table & td:nth-of-type(14):before { content: "Destination"; }
+    .arrivals-table & td:nth-of-type(15):before { content: "WB No"; }
+    .arrivals-table & td:nth-of-type(16):before { content: "Lorry"; }
+    .arrivals-table & td:nth-of-type(17):before { content: "Created By"; }
+
+    /* Productions Table Headers */
+    .productions-table & td:nth-of-type(1):before { content: "Select"; }
+    .productions-table & td:nth-of-type(2):before { content: "Date"; }
+    .productions-table & td:nth-of-type(3):before { content: "Mvmt Type"; }
+    .productions-table & td:nth-of-type(4):before { content: "Bill No"; }
+    .productions-table & td:nth-of-type(5):before { content: "Variety"; }
+    .productions-table & td:nth-of-type(6):before { content: "Product Type"; }
+    .productions-table & td:nth-of-type(7):before { content: "Bags"; }
+    .productions-table & td:nth-of-type(8):before { content: "Bag Size"; }
+    .productions-table & td:nth-of-type(9):before { content: "QTLS"; }
+    .productions-table & td:nth-of-type(10):before { content: "Packaging"; }
+    .productions-table & td:nth-of-type(11):before { content: "From"; }
+    .productions-table & td:nth-of-type(12):before { content: "To"; }
+    .productions-table & td:nth-of-type(13):before { content: "Lorry No"; }
+    .productions-table & td:nth-of-type(14):before { content: "Status"; }
+
+    /* Purchase Rates Table Headers */
+    .rates-table & td:nth-of-type(1):before { content: "Select"; }
+    .rates-table & td:nth-of-type(2):before { content: "Date"; }
+    .rates-table & td:nth-of-type(3):before { content: "SL No"; }
+    .rates-table & td:nth-of-type(4):before { content: "From"; }
+    .rates-table & td:nth-of-type(5):before { content: "Destination"; }
+    .rates-table & td:nth-of-type(6):before { content: "Variety"; }
+    .rates-table & td:nth-of-type(7):before { content: "Bags"; }
+    .rates-table & td:nth-of-type(8):before { content: "Net Weight"; }
+    .rates-table & td:nth-of-type(9):before { content: "Rate Type"; }
+    .rates-table & td:nth-of-type(10):before { content: "Amount Formula"; }
+    .rates-table & td:nth-of-type(11):before { content: "Total Amount"; }
+    .rates-table & td:nth-of-type(12):before { content: "Avg Rate/Q"; }
+    .rates-table & td:nth-of-type(13):before { content: "Created By"; }
+    
+    /* Rice Stock Table Headers */
+    .rstock-table & td:nth-of-type(1):before { content: "Select"; }
+    .rstock-table & td:nth-of-type(2):before { content: "Date"; }
+    .rstock-table & td:nth-of-type(3):before { content: "Type"; }
+    .rstock-table & td:nth-of-type(4):before { content: "Product"; }
+    .rstock-table & td:nth-of-type(5):before { content: "Variety/Packaging"; }
+    .rstock-table & td:nth-of-type(6):before { content: "Bags"; }
+    .rstock-table & td:nth-of-type(7):before { content: "Quantity (Q)"; }
+    .rstock-table & td:nth-of-type(8):before { content: "Location"; }
+    .rstock-table & td:nth-of-type(9):before { content: "Lorry"; }
+    .rstock-table & td:nth-of-type(10):before { content: "Bill"; }
+    .rstock-table & td:nth-of-type(11):before { content: "Created By"; }
+
+    /* Paddy Hamali Table Headers */
+    .paddyhamali-table & td:nth-of-type(1):before { content: "Select"; }
+    .paddyhamali-table & td:nth-of-type(2):before { content: "Date"; }
+    .paddyhamali-table & td:nth-of-type(3):before { content: "SL No"; }
+    .paddyhamali-table & td:nth-of-type(4):before { content: "Broker"; }
+    .paddyhamali-table & td:nth-of-type(5):before { content: "Variety"; }
+    .paddyhamali-table & td:nth-of-type(6):before { content: "Work Type"; }
+    .paddyhamali-table & td:nth-of-type(7):before { content: "Work Detail"; }
+    .paddyhamali-table & td:nth-of-type(8):before { content: "Bags"; }
+    .paddyhamali-table & td:nth-of-type(9):before { content: "Rate"; }
+    .paddyhamali-table & td:nth-of-type(10):before { content: "Amount"; }
+    .paddyhamali-table & td:nth-of-type(11):before { content: "Worker"; }
+    .paddyhamali-table & td:nth-of-type(12):before { content: "Created By"; }
+
+    /* Rice Hamali Table Headers */
+    .ricehamali-table & td:nth-of-type(1):before { content: "Select"; }
+    .ricehamali-table & td:nth-of-type(2):before { content: "Date"; }
+    .ricehamali-table & td:nth-of-type(3):before { content: "Source"; }
+    .ricehamali-table & td:nth-of-type(4):before { content: "Work Type"; }
+    .ricehamali-table & td:nth-of-type(5):before { content: "Work Detail"; }
+    .ricehamali-table & td:nth-of-type(6):before { content: "Bags"; }
+    .ricehamali-table & td:nth-of-type(7):before { content: "Rate"; }
+    .ricehamali-table & td:nth-of-type(8):before { content: "Amount"; }
+    .ricehamali-table & td:nth-of-type(9):before { content: "Created By"; }
+  }
+
   th {
     background: #f9fafb;
     padding: 0.75rem;
@@ -976,7 +1118,7 @@ const PendingApprovals: React.FC = () => {
                         </Button>
                     </ActionButtons>
                 </ActionBar>
-                <TableContainer>
+                <TableContainer className="table-container arrivals-table">
                     <Table>
                         <thead>
                             <tr>
@@ -1085,7 +1227,7 @@ const PendingApprovals: React.FC = () => {
                         </Button>
                     </ActionButtons>
                 </ActionBar>
-                <TableContainer>
+                <TableContainer className="table-container productions-table">
                     <Table>
                         <thead>
                             <tr>
@@ -1218,7 +1360,7 @@ const PendingApprovals: React.FC = () => {
                         </Button>
                     </ActionButtons>
                 </ActionBar>
-                <TableContainer>
+                <TableContainer className="table-container rates-table">
                     <Table>
                         <thead>
                             <tr>
@@ -1330,7 +1472,7 @@ const PendingApprovals: React.FC = () => {
                         </ApproveButton>
                     </ActionButtons>
                 </ActionBar>
-                <TableContainer>
+                <TableContainer className="table-container rstock-table">
                     <Table>
                         <thead>
                             <tr>
@@ -1422,7 +1564,7 @@ const PendingApprovals: React.FC = () => {
                         </ApproveButton>
                     </ActionButtons>
                 </ActionBar>
-                <TableContainer>
+                <TableContainer className="table-container paddyhamali-table">
                     <Table>
                         <thead>
                             <tr>
@@ -1512,7 +1654,7 @@ const PendingApprovals: React.FC = () => {
                         </ApproveButton>
                     </ActionButtons>
                 </ActionBar>
-                <TableContainer>
+                <TableContainer className="table-container ricehamali-table">
                     <Table>
                         <thead>
                             <tr>

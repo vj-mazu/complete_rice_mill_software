@@ -45,7 +45,7 @@ interface SampleEntry {
         reportedBy: string;
         uploadFileUrl?: string;
     };
-    cookingReport?: { status: string; cookingResult: string; recheckCount?: number };
+    cookingReport?: { status: string; cookingResult: string; recheckCount?: number; remarks?: string };
     offering?: { finalPrice?: number; offeringPrice?: number; offerBaseRateValue?: number; baseRateType?: string };
     creator?: { username: string };
 }
@@ -180,8 +180,15 @@ const AdminSampleBook2: React.FC<AdminSampleBook2Props> = ({ entryType, excludeE
             if (result === 'pass' || result === 'ok') { bg = '#e8f5e9'; color = '#2e7d32'; label = '✓ Pass'; }
             else if (result === 'fail') { bg = '#ffcdd2'; color = '#b71c1c'; label = '✕ Fail'; }
             else if (result === 'recheck') { bg = '#e3f2fd'; color = '#1565c0'; label = '🔄 Recheck'; }
-            else if (result === 'medium') { bg = '#fff8e1'; color = '#f9a825'; label = '● Medium'; }
-            return <span style={{ background: bg, color, padding: '1px 6px', borderRadius: '10px', fontSize: '9px', fontWeight: '700' }}>{label}</span>;
+            else if (result === 'medium') { bg = '#e8f5e9'; color = '#2e7d32'; label = '✓ Pass'; }
+            return (
+                <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '2px' }}>
+                    <span style={{ background: bg, color, padding: '1px 6px', borderRadius: '10px', fontSize: '9px', fontWeight: '700' }}>{label}</span>
+                    {result === 'recheck' && cr.remarks && (
+                        <span title={cr.remarks} style={{ color: '#8e24aa', fontSize: '9px', fontWeight: '700', cursor: 'help' }}>💬 Remarks</span>
+                    )}
+                </div>
+            );
         }
         // Pass With Cooking but no cooking report yet = Pending
         if (d === 'PASS_WITH_COOKING' && (!cr || !cr.status)) {
@@ -318,7 +325,7 @@ const AdminSampleBook2: React.FC<AdminSampleBook2Props> = ({ entryType, excludeE
                                             {/* Table */}
                                             <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: '11px', tableLayout: 'fixed', border: '1px solid #000' }}>
                                                 <thead>
-                                                    <tr style={{ backgroundColor: '#1a237e', color: 'white' }}>
+                                                    <tr style={{ backgroundColor: entryType === 'RICE_SAMPLE' ? '#4a148c' : '#1a237e', color: 'white' }}>
                                                         <th style={{ border: '1px solid #000', padding: '3px 4px', fontWeight: '600', fontSize: '13px', textAlign: 'center', whiteSpace: 'nowrap', width: '3.5%' }}>SL No</th>
                                                         <th style={{ border: '1px solid #000', padding: '3px 4px', fontWeight: '600', fontSize: '13px', textAlign: 'center', whiteSpace: 'nowrap', width: '4%' }}>Bags</th>
                                                         <th style={{ border: '1px solid #000', padding: '3px 4px', fontWeight: '600', fontSize: '13px', textAlign: 'center', whiteSpace: 'nowrap', width: '4%' }}>Pkg</th>

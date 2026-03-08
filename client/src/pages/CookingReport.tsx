@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useMemo } from 'react';
+import React, { useState, useEffect, useMemo, useRef } from 'react';
 import axios from 'axios';
 import { useAuth } from '../contexts/AuthContext';
 import { useNotification } from '../contexts/NotificationContext';
@@ -62,6 +62,7 @@ const CookingReport: React.FC<CookingReportProps> = ({ entryType, excludeEntryTy
     cookingApprovedBy: ''
   });
   const [isSubmitting, setIsSubmitting] = useState(false);
+  const submissionLocksRef = useRef<Set<string>>(new Set());
   const [supervisors, setSupervisors] = useState<SupervisorUser[]>([]);
   const [manualCookingName, setManualCookingName] = useState('');
   const [useManualEntry, setUseManualEntry] = useState(false);
@@ -105,6 +106,20 @@ const CookingReport: React.FC<CookingReportProps> = ({ entryType, excludeEntryTy
   useEffect(() => {
     loadEntries();
   }, [page]);
+
+  useEffect(() => {
+    setPage(1);
+  }, [activeTab]);
+
+  const acquireSubmissionLock = (key: string) => {
+    if (submissionLocksRef.current.has(key)) return false;
+    submissionLocksRef.current.add(key);
+    return true;
+  };
+
+  const releaseSubmissionLock = (key: string) => {
+    submissionLocksRef.current.delete(key);
+  };
 
   useEffect(() => {
     loadSupervisors();
@@ -214,6 +229,8 @@ const CookingReport: React.FC<CookingReportProps> = ({ entryType, excludeEntryTy
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!selectedEntry || isSubmitting) return;
+    const lockKey = `cooking-submit-${selectedEntry.id}`;
+    if (!acquireSubmissionLock(lockKey)) return;
 
     // Capitalize function
     const capitalize = (str: string) => str ? str.charAt(0).toUpperCase() + str.slice(1) : '';
@@ -274,6 +291,7 @@ const CookingReport: React.FC<CookingReportProps> = ({ entryType, excludeEntryTy
       showNotification(error.response?.data?.error || 'Failed to add cooking report', 'error');
     } finally {
       setIsSubmitting(false);
+      releaseSubmissionLock(lockKey);
     }
   };
 
@@ -574,6 +592,95 @@ const CookingReport: React.FC<CookingReportProps> = ({ entryType, excludeEntryTy
 
   return (
     <div>
+      <style>
+        {`
+        @media (max-width: 768px) {
+          .cooking-table .responsive-table，
+          .cooking-table .responsive-table thead,
+          .cooking-table .responsive-table tbody,
+          .cooking-table .responsive-table th,
+          .cooking-table .responsive-table td,
+          .cooking-table .responsive-table tr {
+            display: block;
+            width: 100% !important;
+          }
+
+          .cooking-table .responsive-table thead tr {
+            position: absolute;
+            top: -9999px;
+            left: -9999px;
+          }
+
+          .cooking-table .responsive-table tr {
+            border: 1px solid #ccc;
+            margin-bottom: 0.5rem;
+            padding: 0.2rem;
+            border-radius: 8px;
+            background: white !important;
+          }
+
+          .cooking-table .responsive-table td {
+            border: none !important;
+            border-bottom: 1px solid #eee !important;
+            position: relative;
+            padding-left: 45% !important;
+            text-align: left !important;
+            min-height: 40px;
+            display: flex;
+            align-items: center;
+            justify-content: flex-end;
+          }
+          
+          .cooking-table .responsive-table td:before {
+            position: absolute;
+            top: 50%;
+            transform: translateY(-50%);
+            left: 12px;
+            width: 40%;
+            padding-right: 10px;
+            white-space: nowrap;
+            text-align: left;
+            font-weight: 600;
+            color: #6b7280;
+            font-size: 0.85rem;
+          }
+
+          .action-col {
+             justify-content: flex-end;
+             text-align: right;
+          }
+
+          /* Match columns mapping - Paddy Cooking */
+          .cooking-table .responsive-table.has-type td:nth-of-type(1):before { content: "SL No"; }
+          .cooking-table .responsive-table.has-type td:nth-of-type(2):before { content: "Type"; }
+          .cooking-table .responsive-table.has-type td:nth-of-type(3):before { content: "Bags"; }
+          .cooking-table .responsive-table.has-type td:nth-of-type(4):before { content: "Pkg"; }
+          .cooking-table .responsive-table.has-type td:nth-of-type(5):before { content: "Party Name"; }
+          .cooking-table .responsive-table.has-type td:nth-of-type(6):before { content: "Location"; }
+          .cooking-table .responsive-table.has-type td:nth-of-type(7):before { content: "Variety"; }
+          .cooking-table .responsive-table.has-type td:nth-of-type(8):before { content: "Quality"; }
+          .cooking-table .responsive-table.has-type td:nth-of-type(9):before { content: "Sample Report By"; }
+          .cooking-table .responsive-table.has-type td:nth-of-type(10):before { content: "Grain"; }
+          .cooking-table .responsive-table.has-type td:nth-of-type(11):before { content: "Cooking Done by"; }
+          .cooking-table .responsive-table.has-type td:nth-of-type(12):before { content: "Cooking Apprvd By"; }
+          .cooking-table .responsive-table.has-type td:nth-of-type(13):before { content: "Status"; }
+          .cooking-table .responsive-table.has-type td:nth-of-type(14):before { content: "Action"; }
+
+          /* Match columns mapping - Rice Cooking */
+          .cooking-table .responsive-table.no-type td:nth-of-type(1):before { content: "SL No"; }
+          .cooking-table .responsive-table.no-type td:nth-of-type(2):before { content: "Bags"; }
+          .cooking-table .responsive-table.no-type td:nth-of-type(3):before { content: "Pkg"; }
+          .cooking-table .responsive-table.no-type td:nth-of-type(4):before { content: "Party Name"; }
+          .cooking-table .responsive-table.no-type td:nth-of-type(5):before { content: "Location"; }
+          .cooking-table .responsive-table.no-type td:nth-of-type(6):before { content: "Variety"; }
+          .cooking-table .responsive-table.no-type td:nth-of-type(7):before { content: "Sample Report"; }
+          .cooking-table .responsive-table.no-type td:nth-of-type(8):before { content: "Cooking Done by"; }
+          .cooking-table .responsive-table.no-type td:nth-of-type(9):before { content: "Cooking Apprvd By"; }
+          .cooking-table .responsive-table.no-type td:nth-of-type(10):before { content: "Status"; }
+          .cooking-table .responsive-table.no-type td:nth-of-type(11):before { content: "Action"; }
+        }
+        `}
+      </style>
       {/* Tabs */}
       <div style={{ display: 'flex', gap: '4px', marginBottom: '8px', overflowX: 'auto', paddingBottom: '4px' }}>
         {(!entryType || entryType !== 'RICE_SAMPLE') && (
@@ -710,104 +817,249 @@ const CookingReport: React.FC<CookingReportProps> = ({ entryType, excludeEntryTy
                           }}>
                             <span style={{ fontSize: '13.5px', fontWeight: '800' }}>{brokerSeq}.</span> {brokerName}
                           </div>
-                          <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: '12px', tableLayout: 'fixed', border: '1px solid #000' }}>
-                            <thead>
-                              <tr style={{ background: (activeTab as string) === 'RICE_COOKING_REPORT' ? 'linear-gradient(135deg, #d35400, #a04000)' : 'linear-gradient(135deg, #1a237e, #0d47a1)', color: 'white' }}>
-                                <th style={{ border: '1px solid #000', padding: '3px 4px', fontWeight: '600', fontSize: '13px', textAlign: 'center', width: '3%' }}>SL No</th>
-                                {(activeTab as string) !== 'RICE_COOKING_REPORT' && (
-                                  <th style={{ border: '1px solid #000', padding: '3px 4px', fontWeight: '600', fontSize: '13px', textAlign: 'center', width: '3%' }}>Type</th>
-                                )}
-                                <th style={{ border: '1px solid #000', padding: '3px 4px', fontWeight: '600', fontSize: '13px', textAlign: 'center', width: '4%' }}>Bags</th>
-                                <th style={{ border: '1px solid #000', padding: '3px 4px', fontWeight: '600', fontSize: '13px', textAlign: 'center', width: '3%' }}>Pkg</th>
-                                <th style={{ border: '1px solid #000', padding: '3px 4px', fontWeight: '600', fontSize: '13px', textAlign: 'left', width: '14%' }}>Party Name</th>
-                                <th style={{ border: '1px solid #000', padding: '3px 4px', fontWeight: '600', fontSize: '12px', textAlign: 'left', whiteSpace: 'nowrap', width: '12%' }}>{(activeTab as string) === 'RICE_COOKING_REPORT' ? 'Rice Location' : 'Paddy Location'}</th>
-                                <th style={{ border: '1px solid #000', padding: '3px 4px', fontWeight: '600', fontSize: '13px', textAlign: 'left', width: '8%' }}>Variety</th>
-                                <th style={{ border: '1px solid #000', padding: '3px 4px', fontWeight: '600', fontSize: '13px', textAlign: 'center', width: '6%' }}>Quality</th>
-                                <th style={{ border: '1px solid #000', padding: '3px 4px', fontWeight: '600', fontSize: '13px', textAlign: 'center', width: '6%' }}>Sample Report By</th>
-                                <th style={{ border: '1px solid #000', padding: '3px 4px', fontWeight: '600', fontSize: '13px', textAlign: 'center', width: '5%' }}>Grain</th>
-                                <th style={{ border: '1px solid #000', padding: '3px 4px', fontWeight: '600', fontSize: '13px', textAlign: 'center', width: '8%' }}>Cooking Done by</th>
+                          <div className="table-container cooking-table">
+                            <table className="responsive-table" style={{ width: '100%', borderCollapse: 'collapse', fontSize: '12px', tableLayout: 'fixed', border: '1px solid #000' }}>
+                              <thead>
+                                <tr style={{ backgroundColor: '#1a237e', color: 'white' }}>
+                                  <th style={{ border: '1px solid #000', padding: '3px 4px', fontWeight: '600', fontSize: '13px', textAlign: 'center', width: '3%' }}>SL No</th>
+                                  {(activeTab as string) !== 'RICE_COOKING_REPORT' && (
+                                    <th style={{ border: '1px solid #000', padding: '1px 3px', fontWeight: '600', fontSize: '12px', textAlign: 'center', width: '3%' }}>Type</th>
+                                  )}
+                                  <th style={{ border: '1px solid #000', padding: '3px 4px', fontWeight: '600', fontSize: '13px', textAlign: 'center', width: '4%' }}>Bags</th>
+                                  <th style={{ border: '1px solid #000', padding: '3px 4px', fontWeight: '600', fontSize: '13px', textAlign: 'center', width: '4%' }}>Pkg</th>
+                                  <th style={{ border: '1px solid #000', padding: '3px 4px', fontWeight: '600', fontSize: '13px', textAlign: 'left', width: '11%' }}>Party Name</th>
+                                  <th style={{ border: '1px solid #000', padding: '3px 4px', fontWeight: '600', fontSize: '13px', textAlign: 'left', width: '9%' }}>Location</th>
+                                  <th style={{ border: '1px solid #000', padding: '3px 4px', fontWeight: '600', fontSize: '13px', textAlign: 'left', width: '7%' }}>Variety</th>
+                                  <th style={{ border: '1px solid #000', padding: '3px 4px', fontWeight: '600', fontSize: '13px', textAlign: 'center', width: '4%' }}>Quality</th>
+                                  <th style={{ border: '1px solid #000', padding: '3px 4px', fontWeight: '600', fontSize: '13px', textAlign: 'center', width: '6%' }}>Sample Report By</th>
+                                  <th style={{ border: '1px solid #000', padding: '3px 4px', fontWeight: '600', fontSize: '13px', textAlign: 'center', width: '4%' }}>G C</th>
+                                  <th style={{ border: '1px solid #000', padding: '3px 4px', fontWeight: '600', fontSize: '13px', textAlign: 'center', width: '6%' }}>Cooking Done by</th>
+                                  <th style={{ border: '1px solid #000', padding: '3px 4px', fontWeight: '600', fontSize: '13px', textAlign: 'center', width: '7%' }}>Cooking Apprvd By</th>
+                                  <th style={{ border: '1px solid #000', padding: '3px 4px', fontWeight: '600', fontSize: '13px', textAlign: 'center', width: '5%' }}>Status</th>
+                                  {canTakeAction && (
+                                    <th className="action-col" style={{ border: '1px solid #000', padding: '3px 4px', fontWeight: '600', fontSize: '13px', textAlign: 'center', width: '8%' }}>Action</th>
+                                  )}
+                                </tr>
+                              </thead>
+                              <tbody>
+                                {paddyEntries.map((entry, idx) => {
+                                  const slNo = idx + 1;
 
-                                <th style={{ border: '1px solid #000', padding: '3px 4px', fontWeight: '600', fontSize: '13px', textAlign: 'center', width: '8%' }}>Cooking Apprvd By</th>
-                                <th style={{ border: '1px solid #000', padding: '3px 4px', fontWeight: '600', fontSize: '13px', textAlign: 'center', width: '8%' }}>Status</th>
+                                  // Determine Quality Info (Pass)
+                                  let objQuality: React.ReactNode = '-';
+                                  if (entry.qualityParameters) {
+                                    objQuality = <span style={{ color: '#2e7d32' }}>Pass</span>;
+                                  }
 
-                                {canTakeAction && (
-                                  <th style={{ border: '1px solid #000', padding: '3px 4px', fontWeight: '600', fontSize: '13px', textAlign: 'center', width: '8%' }}>Action</th>
-                                )}
-                              </tr>
-                            </thead>
-                            <tbody>
-                              {paddyEntries.map((entry, idx) => {
-                                const slNo = idx + 1;
-
-                                // Determine Quality Info (Pass)
-                                let objQuality: React.ReactNode = '-';
-                                if (entry.qualityParameters) {
-                                  objQuality = <span style={{ color: '#2e7d32' }}>Pass</span>;
-                                }
-
-                                return (
-                                  <tr key={entry.id} style={{ backgroundColor: entry.entryType === 'DIRECT_LOADED_VEHICLE' ? '#e3f2fd' : entry.entryType === 'LOCATION_SAMPLE' ? '#ffe0b2' : '#ffffff', }}>
-                                    <td style={{ border: '1px solid #000', padding: '3px 4px', textAlign: 'center', fontWeight: '600', fontSize: '13px' }}>{slNo}</td>
-                                    {(activeTab as string) !== 'RICE_COOKING_REPORT' && (
-                                      <td style={{ border: '1px solid #000', padding: '1px 3px', textAlign: 'center', verticalAlign: 'middle' }}>
-                                        {entry.entryType === 'DIRECT_LOADED_VEHICLE' && <span style={{ color: 'white', backgroundColor: '#1565c0', padding: '1px 4px', borderRadius: '3px', fontSize: '12px', fontWeight: '800' }}>RL</span>}
-                                        {entry.entryType === 'LOCATION_SAMPLE' && <span style={{ color: 'white', backgroundColor: '#e67e22', padding: '1px 4px', borderRadius: '3px', fontSize: '12px', fontWeight: '800' }}>LS</span>}
-                                        {entry.entryType !== 'DIRECT_LOADED_VEHICLE' && entry.entryType !== 'LOCATION_SAMPLE' && <span style={{ color: '#333', backgroundColor: '#fff', padding: '1px 4px', borderRadius: '3px', fontSize: '12px', fontWeight: '800', border: '1px solid #ccc' }}>MS</span>}
+                                  return (
+                                    <tr key={entry.id} style={{ backgroundColor: entry.entryType === 'DIRECT_LOADED_VEHICLE' ? '#e3f2fd' : entry.entryType === 'LOCATION_SAMPLE' ? '#ffe0b2' : '#ffffff', }}>
+                                      <td style={{ border: '1px solid #000', padding: '3px 4px', textAlign: 'center', fontWeight: '600', fontSize: '13px' }}>{slNo}</td>
+                                      {(activeTab as string) !== 'RICE_COOKING_REPORT' && (
+                                        <td style={{ border: '1px solid #000', padding: '1px 3px', textAlign: 'center', verticalAlign: 'middle' }}>
+                                          {entry.entryType === 'DIRECT_LOADED_VEHICLE' && <span style={{ color: 'white', backgroundColor: '#1565c0', padding: '1px 4px', borderRadius: '3px', fontSize: '12px', fontWeight: '800' }}>RL</span>}
+                                          {entry.entryType === 'LOCATION_SAMPLE' && <span style={{ color: 'white', backgroundColor: '#e67e22', padding: '1px 4px', borderRadius: '3px', fontSize: '12px', fontWeight: '800' }}>LS</span>}
+                                          {entry.entryType !== 'DIRECT_LOADED_VEHICLE' && entry.entryType !== 'LOCATION_SAMPLE' && <span style={{ color: '#333', backgroundColor: '#fff', padding: '1px 4px', borderRadius: '3px', fontSize: '12px', fontWeight: '800', border: '1px solid #ccc' }}>MS</span>}
+                                        </td>
+                                      )}
+                                      <td style={{ border: '1px solid #000', padding: '3px 4px', textAlign: 'center', fontWeight: '600', fontSize: '13px' }}>{entry.bags?.toLocaleString('en-IN') || '0'}</td>
+                                      <td style={{ border: '1px solid #000', padding: '3px 4px', fontSize: '13px', textAlign: 'center' }}>{entry.packaging || '-'}</td>
+                                      <td style={{ border: '1px solid #000', padding: '3px 4px', textAlign: 'left', fontSize: '14px', fontWeight: '600', color: '#1565c0' }}>{toTitleCase(entry.partyName)}{entry.entryType === 'DIRECT_LOADED_VEHICLE' && entry.lorryNumber ? <div style={{ fontSize: '13px', color: '#1565c0', fontWeight: '600' }}>{entry.lorryNumber.toUpperCase()}</div> : ''}</td>
+                                      <td style={{ border: '1px solid #000', padding: '3px 4px', textAlign: 'left', fontSize: '13px' }}>{toTitleCase(entry.location) || '-'}</td>
+                                      <td style={{ border: '1px solid #000', padding: '3px 4px', textAlign: 'left', fontSize: '13px' }}>{toTitleCase(entry.variety)}</td>
+                                      <td style={{ border: '1px solid #000', padding: '3px 4px', textAlign: 'center', fontSize: '12px', fontWeight: '700' }}>{objQuality}</td>
+                                      <td style={{ border: '1px solid #000', padding: '3px 4px', textAlign: 'center', fontSize: '12px', fontWeight: '600' }}>
+                                        {renderSampleReportByWithDate(entry)}
                                       </td>
-                                    )}
-                                    <td style={{ border: '1px solid #000', padding: '3px 4px', textAlign: 'center', fontWeight: '600', fontSize: '13px' }}>{entry.bags?.toLocaleString('en-IN') || '0'}</td>
-                                    <td style={{ border: '1px solid #000', padding: '3px 4px', fontSize: '13px', textAlign: 'center' }}>{entry.packaging || '-'}</td>
-                                    <td style={{ border: '1px solid #000', padding: '3px 4px', textAlign: 'left', fontSize: '14px', fontWeight: '600', color: '#1565c0' }}>{toTitleCase(entry.partyName)}{entry.entryType === 'DIRECT_LOADED_VEHICLE' && entry.lorryNumber ? <div style={{ fontSize: '13px', color: '#1565c0', fontWeight: '600' }}>{entry.lorryNumber.toUpperCase()}</div> : ''}</td>
-                                    <td style={{ border: '1px solid #000', padding: '3px 4px', textAlign: 'left', fontSize: '13px' }}>{toTitleCase(entry.location) || '-'}</td>
-                                    <td style={{ border: '1px solid #000', padding: '3px 4px', textAlign: 'left', fontSize: '13px' }}>{toTitleCase(entry.variety)}</td>
-                                    <td style={{ border: '1px solid #000', padding: '3px 4px', textAlign: 'center', fontSize: '12px', fontWeight: '700' }}>{objQuality}</td>
-                                    <td style={{ border: '1px solid #000', padding: '3px 4px', textAlign: 'center', fontSize: '12px', fontWeight: '600' }}>
-                                      {renderSampleReportByWithDate(entry)}
-                                    </td>
-                                    <td style={{ border: '1px solid #000', padding: '3px 4px', textAlign: 'center', fontSize: '13px', fontWeight: '700', color: '#333' }}>{entry.qualityParameters?.grainsCount ? `(${entry.qualityParameters.grainsCount})` : '-'}</td>
-                                    <td style={{ border: '1px solid #000', padding: '3px 4px', textAlign: 'center', fontSize: '12px', fontWeight: '600', color: '#6a1b9a' }}>
-                                      {renderCookingDoneByWithDate(entry, '')}
-                                    </td>
-
-                                    <td style={{ border: '1px solid #000', padding: '3px 4px', textAlign: 'center', fontSize: '12px', fontWeight: '600', color: '#1565c0' }}>
-                                      {renderApprovedByWithDate(entry)}
-                                    </td>
-                                    <td style={{ border: '1px solid #000', padding: '3px 4px', textAlign: 'center', fontSize: '12px' }}>
-                                      {getStatusBadge(entry)}
-                                    </td>
-                                    {canTakeAction && (
-                                      <td style={{ border: '1px solid #000', padding: '4px 6px', textAlign: 'center' }}>
-                                        {(() => {
-                                          const cr = entry.cookingReport;
-                                          const h = cr?.history || [];
-                                          const lastH = h.length > 0 ? h[h.length - 1] : null;
-                                          const waitingAdmin = lastH && !lastH.status && lastH.cookingDoneBy;
-                                          const waitingStaff = !cr || (cr.status === 'RECHECK' && !waitingAdmin) || (!cr.cookingDoneBy && !waitingAdmin);
-
-                                          if (user?.role !== 'staff' || waitingStaff) {
-                                            return (
-                                              <button
-                                                onClick={() => handleOpenModal(entry)}
-                                                style={{
-                                                  fontSize: '9px', padding: '4px 10px',
-                                                  backgroundColor: '#3498db', color: 'white', border: 'none',
-                                                  borderRadius: '10px', cursor: 'pointer', fontWeight: '600'
-                                                }}
-                                              >
-                                                {user?.role === 'staff' ? 'Add Cooking Done By' : 'Add Report'}
-                                              </button>
-                                            );
-                                          } else {
-                                            return <span style={{ fontSize: '11px', color: '#999', fontStyle: 'italic' }}>Locked</span>;
-                                          }
-                                        })()}
+                                      <td style={{ border: '1px solid #000', padding: '3px 4px', textAlign: 'center', fontSize: '13px', fontWeight: '700', color: '#333' }}>{entry.qualityParameters?.grainsCount ? `(${entry.qualityParameters.grainsCount})` : '-'}</td>
+                                      <td style={{ border: '1px solid #000', padding: '3px 4px', textAlign: 'center', fontSize: '12px', fontWeight: '600', color: '#6a1b9a' }}>
+                                        {renderCookingDoneByWithDate(entry, '')}
                                       </td>
-                                    )}
-                                  </tr>
-                                );
-                              })}
-                            </tbody>
-                          </table>
+
+                                      <td style={{ border: '1px solid #000', padding: '3px 4px', textAlign: 'center', fontSize: '12px', fontWeight: '600', color: '#1565c0' }}>
+                                        {renderApprovedByWithDate(entry)}
+                                      </td>
+                                      <td style={{ border: '1px solid #000', padding: '3px 4px', textAlign: 'center', fontSize: '12px' }}>
+                                        {getStatusBadge(entry)}
+                                      </td>
+                                      {canTakeAction && (
+                                        <td className="action-col" style={{ border: '1px solid #000', padding: '4px 6px', textAlign: 'center' }}>
+                                          {(() => {
+                                            const cr = entry.cookingReport;
+                                            const h = cr?.history || [];
+                                            const lastH = h.length > 0 ? h[h.length - 1] : null;
+                                            const waitingAdmin = lastH && !lastH.status && lastH.cookingDoneBy;
+                                            const waitingStaff = !cr || (cr.status === 'RECHECK' && !waitingAdmin) || (!cr.cookingDoneBy && !waitingAdmin);
+
+                                            if (user?.role !== 'staff' || waitingStaff) {
+                                              return (
+                                                <button
+                                                  onClick={() => handleOpenModal(entry)}
+                                                  style={{
+                                                    fontSize: '9px', padding: '4px 10px',
+                                                    backgroundColor: '#3498db', color: 'white', border: 'none',
+                                                    borderRadius: '10px', cursor: 'pointer', fontWeight: '600'
+                                                  }}
+                                                >
+                                                  {user?.role === 'staff' ? 'Add Cooking Done By' : 'Add Report'}
+                                                </button>
+                                              );
+                                            } else {
+                                              return <span style={{ fontSize: '11px', color: '#999', fontStyle: 'italic' }}>Locked</span>;
+                                            }
+                                          })()}
+                                        </td>
+                                      )}
+                                    </tr>
+                                  );
+                                })}
+                              </tbody>
+                            </table>
+                          </div>
+                        </div>
+                      );
+                    })}
+                  </div>
+                );
+              })
+            )}
+          </div >
+        </>
+      )}
+
+      {
+        activeTab === 'RICE_COOKING_REPORT' && (
+          <div style={{ overflowX: 'auto', backgroundColor: 'white' }}>
+            {loading ? (
+              <div style={{ textAlign: 'center', padding: '20px', color: '#666' }}>Loading...</div>
+            ) : Object.keys(displayGrouped).length === 0 ? (
+              <div style={{ textAlign: 'center', padding: '20px', color: '#999' }}>No rice samples found</div>
+            ) : (
+              Object.entries(displayGrouped).map(([dateKey, brokerGroups]) => {
+                // Filter brokers that have at least one Rice entry
+                const visibleBrokers = Object.entries(brokerGroups)
+                  .map(([bName, bEntries]) => ({
+                    name: bName,
+                    entries: bEntries.filter(e => e.entryType === 'RICE_SAMPLE')
+                  }))
+                  .filter(b => b.entries.length > 0)
+                  .sort((a, b) => a.name.localeCompare(b.name));
+
+                if (visibleBrokers.length === 0) return null;
+
+                let brokerSeq = 0;
+                return (
+                  <div key={dateKey} style={{ marginBottom: '20px' }}>
+                    {visibleBrokers.map((brokerGroup, vIdx) => {
+                      brokerSeq++;
+                      const { name: brokerName, entries: riceEntries } = brokerGroup;
+                      return (
+                        <div key={brokerName} style={{ marginBottom: '0px' }}>
+                          {/* Date bar — only first visible broker */}
+                          {vIdx === 0 && (
+                            <div style={{
+                              background: 'linear-gradient(135deg, #1a1a2e 0%, #16213e 100%)',
+                              color: 'white', padding: '6px 10px', fontWeight: '700', fontSize: '14px',
+                              textAlign: 'center', letterSpacing: '0.5px'
+                            }}>
+                              {(() => { const d = new Date(riceEntries[0]?.entryDate); return `${String(d.getDate()).padStart(2, '0')}-${String(d.getMonth() + 1).padStart(2, '0')}-${d.getFullYear()}`; })()}
+                              &nbsp;&nbsp;Rice Sample Cooking
+                            </div>
+                          )}
+
+                          {/* Broker name bar */}
+                          <div style={{
+                            background: '#e8eaf6',
+                            color: '#000', padding: '4px 10px', fontWeight: '700', fontSize: '13.5px',
+                            display: 'flex', alignItems: 'center', gap: '4px'
+                          }}>
+                            <span style={{ fontSize: '13.5px', fontWeight: '800' }}>{brokerSeq}.</span> {brokerName}
+                          </div>
+
+                          <div className="table-container cooking-table">
+                            <table className="responsive-table" style={{ width: '100%', borderCollapse: 'collapse', fontSize: '12px', tableLayout: 'fixed', border: '1px solid #000' }}>
+                              <thead>
+                                <tr style={{ backgroundColor: '#4a148c', color: 'white' }}>
+                                  <th style={{ border: '1px solid #000', padding: '3px 4px', fontWeight: '600', fontSize: '13px', textAlign: 'center', width: '3%' }}>SL No</th>
+                                  <th style={{ border: '1px solid #000', padding: '3px 4px', fontWeight: '600', fontSize: '13px', textAlign: 'center', width: '6%' }}>Bags</th>
+                                  <th style={{ border: '1px solid #000', padding: '3px 4px', fontWeight: '600', fontSize: '13px', textAlign: 'center', width: '6%' }}>Pkg</th>
+                                  <th style={{ border: '1px solid #000', padding: '3px 4px', fontWeight: '600', fontSize: '13px', textAlign: 'left', width: '16%' }}>Party Name</th>
+                                  <th style={{ border: '1px solid #000', padding: '3px 4px', fontWeight: '600', fontSize: '13px', textAlign: 'left', width: '12%' }}>Location</th>
+                                  <th style={{ border: '1px solid #000', padding: '3px 4px', fontWeight: '600', fontSize: '13px', textAlign: 'left', width: '8%' }}>Variety</th>
+                                  <th style={{ border: '1px solid #000', padding: '3px 4px', fontWeight: '600', fontSize: '13px', textAlign: 'center', width: '10%' }}>Sample Report By</th>
+                                  <th style={{ border: '1px solid #000', padding: '3px 4px', fontWeight: '600', fontSize: '13px', textAlign: 'center', width: '10%' }}>Cooking Done by</th>
+
+                                  <th style={{ border: '1px solid #000', padding: '3px 4px', fontWeight: '600', fontSize: '13px', textAlign: 'center', width: '10%' }}>Cooking Apprvd By</th>
+                                  <th style={{ border: '1px solid #000', padding: '3px 4px', fontWeight: '600', fontSize: '13px', textAlign: 'center', width: '8%' }}>Status</th>
+
+                                  {canTakeAction && (
+                                    <th className="action-col" style={{ border: '1px solid #000', padding: '3px 4px', fontWeight: '600', fontSize: '13px', textAlign: 'center', width: '9%' }}>Action</th>
+                                  )}
+                                </tr>
+                              </thead>
+                              <tbody>
+                                {riceEntries.map((entry, idx) => {
+                                  const slNo = idx + 1;
+                                  return (
+                                    <tr key={entry.id}>
+                                      <td style={{ border: '1px solid #000', padding: '3px 4px', textAlign: 'center', fontWeight: '600', fontSize: '13px' }}>{slNo}</td>
+                                      <td style={{ border: '1px solid #000', padding: '3px 4px', textAlign: 'center', fontWeight: '700', fontSize: '13px', color: '#1565c0' }}>{entry.bags?.toLocaleString('en-IN') || '0'}</td>
+                                      <td style={{ border: '1px solid #000', padding: '3px 4px', textAlign: 'center', fontSize: '11px' }}>{(() => {
+                                        let pkg = String(entry.packaging || '75');
+                                        if (pkg.toLowerCase() === '0' || pkg.toLowerCase() === 'loose') return 'Loose';
+                                        if (pkg.toLowerCase().includes('kg')) return pkg;
+                                        if (pkg.toLowerCase().includes('tons')) return pkg;
+                                        return `${pkg} kg`;
+                                      })()}</td>
+                                      <td style={{ border: '1px solid #000', padding: '3px 4px', textAlign: 'left', fontSize: '14px', fontWeight: '600', color: '#1565c0' }}>{toTitleCase(entry.partyName)}</td>
+                                      <td style={{ border: '1px solid #000', padding: '3px 4px', textAlign: 'left', fontSize: '13px' }}>{toTitleCase(entry.location) || '-'}</td>
+                                      <td style={{ border: '1px solid #000', padding: '3px 4px', textAlign: 'left', fontSize: '13px' }}>{toTitleCase(entry.variety)}</td>
+                                      <td style={{ border: '1px solid #000', padding: '3px 4px', textAlign: 'center', fontSize: '12px', fontWeight: '600' }}>
+                                        {renderSampleReportByWithDate(entry)}
+                                      </td>
+                                      <td style={{ border: '1px solid #000', padding: '3px 4px', textAlign: 'center', fontSize: '12px', fontWeight: '600', color: '#6a1b9a' }}>
+                                        {renderCookingDoneByWithDate(entry, '')}
+                                      </td>
+
+                                      <td style={{ border: '1px solid #000', padding: '3px 4px', textAlign: 'center', fontSize: '12px', fontWeight: '600', color: '#1565c0' }}>
+                                        {renderApprovedByWithDate(entry)}
+                                      </td>
+                                      <td style={{ border: '1px solid #000', padding: '3px 4px', textAlign: 'center', fontSize: '12px' }}>
+                                        {getStatusBadge(entry)}
+                                      </td>
+                                      {canTakeAction && (
+                                        <td style={{ border: '1px solid #000', padding: '4px 6px', textAlign: 'center' }}>
+                                          {(() => {
+                                            const cr = entry.cookingReport;
+                                            const h = cr?.history || [];
+                                            const lastH = h.length > 0 ? h[h.length - 1] : null;
+                                            const waitingAdmin = lastH && !lastH.status && lastH.cookingDoneBy;
+                                            const waitingStaff = !cr || (cr.status === 'RECHECK' && !waitingAdmin) || (!cr.cookingDoneBy && !waitingAdmin);
+
+                                            if (user?.role !== 'staff' || waitingStaff) {
+                                              return (
+                                                <button
+                                                  onClick={() => handleOpenModal(entry)}
+                                                  style={{
+                                                    fontSize: '9px', padding: '4px 10px',
+                                                    backgroundColor: '#3498db', color: 'white', border: 'none',
+                                                    borderRadius: '10px', cursor: 'pointer', fontWeight: '600'
+                                                  }}
+                                                >
+                                                  {user?.role === 'staff' ? 'Add Cooking Done By' : 'Add Report'}
+                                                </button>
+                                              );
+                                            } else {
+                                              return <span style={{ fontSize: '11px', color: '#999', fontStyle: 'italic' }}>Locked</span>;
+                                            }
+                                          })()}
+                                        </td>
+                                      )}
+                                    </tr>
+                                  );
+                                })}
+                              </tbody>
+                            </table>
+                          </div>
                         </div>
                       );
                     })}
@@ -816,394 +1068,257 @@ const CookingReport: React.FC<CookingReportProps> = ({ entryType, excludeEntryTy
               })
             )}
           </div>
-        </>
-      )}
-
-      {activeTab === 'RICE_COOKING_REPORT' && (
-        <div style={{ overflowX: 'auto', backgroundColor: 'white' }}>
-          {loading ? (
-            <div style={{ textAlign: 'center', padding: '20px', color: '#666' }}>Loading...</div>
-          ) : Object.keys(displayGrouped).length === 0 ? (
-            <div style={{ textAlign: 'center', padding: '20px', color: '#999' }}>No rice samples found</div>
-          ) : (
-            Object.entries(displayGrouped).map(([dateKey, brokerGroups]) => {
-              // Filter brokers that have at least one Rice entry
-              const visibleBrokers = Object.entries(brokerGroups)
-                .map(([bName, bEntries]) => ({
-                  name: bName,
-                  entries: bEntries.filter(e => e.entryType === 'RICE_SAMPLE')
-                }))
-                .filter(b => b.entries.length > 0)
-                .sort((a, b) => a.name.localeCompare(b.name));
-
-              if (visibleBrokers.length === 0) return null;
-
-              let brokerSeq = 0;
-              return (
-                <div key={dateKey} style={{ marginBottom: '20px' }}>
-                  {visibleBrokers.map((brokerGroup, vIdx) => {
-                    brokerSeq++;
-                    const { name: brokerName, entries: riceEntries } = brokerGroup;
-                    return (
-                      <div key={brokerName} style={{ marginBottom: '0px' }}>
-                        {/* Date bar — only first visible broker */}
-                        {vIdx === 0 && (
-                          <div style={{
-                            background: 'linear-gradient(135deg, #1a1a2e 0%, #16213e 100%)',
-                            color: 'white', padding: '6px 10px', fontWeight: '700', fontSize: '14px',
-                            textAlign: 'center', letterSpacing: '0.5px'
-                          }}>
-                            {(() => { const d = new Date(riceEntries[0]?.entryDate); return `${String(d.getDate()).padStart(2, '0')}-${String(d.getMonth() + 1).padStart(2, '0')}-${d.getFullYear()}`; })()}
-                            &nbsp;&nbsp;Rice Sample Cooking
-                          </div>
-                        )}
-
-                        {/* Broker name bar */}
-                        <div style={{
-                          background: '#e8eaf6',
-                          color: '#000', padding: '4px 10px', fontWeight: '700', fontSize: '13.5px',
-                          display: 'flex', alignItems: 'center', gap: '4px'
-                        }}>
-                          <span style={{ fontSize: '13.5px', fontWeight: '800' }}>{brokerSeq}.</span> {brokerName}
-                        </div>
-
-                        <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: '12px', tableLayout: 'fixed', border: '1px solid #000' }}>
-                          <thead>
-                            <tr style={{ backgroundColor: '#1a237e', color: 'white' }}>
-                              <th style={{ border: '1px solid #000', padding: '3px 4px', fontWeight: '600', fontSize: '13px', textAlign: 'center', width: '3%' }}>SL No</th>
-                              <th style={{ border: '1px solid #000', padding: '3px 4px', fontWeight: '600', fontSize: '13px', textAlign: 'center', width: '6%' }}>Bags</th>
-                              <th style={{ border: '1px solid #000', padding: '3px 4px', fontWeight: '600', fontSize: '13px', textAlign: 'center', width: '6%' }}>Pkg</th>
-                              <th style={{ border: '1px solid #000', padding: '3px 4px', fontWeight: '600', fontSize: '13px', textAlign: 'left', width: '16%' }}>Party Name</th>
-                              <th style={{ border: '1px solid #000', padding: '3px 4px', fontWeight: '600', fontSize: '13px', textAlign: 'left', width: '12%' }}>Location</th>
-                              <th style={{ border: '1px solid #000', padding: '3px 4px', fontWeight: '600', fontSize: '13px', textAlign: 'left', width: '8%' }}>Variety</th>
-                              <th style={{ border: '1px solid #000', padding: '3px 4px', fontWeight: '600', fontSize: '13px', textAlign: 'center', width: '10%' }}>Sample Report By</th>
-                              <th style={{ border: '1px solid #000', padding: '3px 4px', fontWeight: '600', fontSize: '13px', textAlign: 'center', width: '10%' }}>Cooking Done by</th>
-
-                              <th style={{ border: '1px solid #000', padding: '3px 4px', fontWeight: '600', fontSize: '13px', textAlign: 'center', width: '10%' }}>Cooking Apprvd By</th>
-                              <th style={{ border: '1px solid #000', padding: '3px 4px', fontWeight: '600', fontSize: '13px', textAlign: 'center', width: '8%' }}>Status</th>
-
-                              {canTakeAction && (
-                                <th style={{ border: '1px solid #000', padding: '3px 4px', fontWeight: '600', fontSize: '13px', textAlign: 'center', width: '9%' }}>Action</th>
-                              )}
-                            </tr>
-                          </thead>
-                          <tbody>
-                            {riceEntries.map((entry, idx) => {
-                              const slNo = idx + 1;
-                              return (
-                                <tr key={entry.id}>
-                                  <td style={{ border: '1px solid #000', padding: '3px 4px', textAlign: 'center', fontWeight: '600', fontSize: '13px' }}>{slNo}</td>
-                                  <td style={{ border: '1px solid #000', padding: '3px 4px', textAlign: 'center', fontWeight: '700', fontSize: '13px', color: '#1565c0' }}>{entry.bags?.toLocaleString('en-IN') || '0'}</td>
-                                  <td style={{ border: '1px solid #000', padding: '3px 4px', textAlign: 'center', fontSize: '11px' }}>{(() => {
-                                    let pkg = String(entry.packaging || '75');
-                                    if (pkg.toLowerCase() === '0' || pkg.toLowerCase() === 'loose') return 'Loose';
-                                    if (pkg.toLowerCase().includes('kg')) return pkg;
-                                    if (pkg.toLowerCase().includes('tons')) return pkg;
-                                    return `${pkg} kg`;
-                                  })()}</td>
-                                  <td style={{ border: '1px solid #000', padding: '3px 4px', textAlign: 'left', fontSize: '14px', fontWeight: '600', color: '#1565c0' }}>{toTitleCase(entry.partyName)}</td>
-                                  <td style={{ border: '1px solid #000', padding: '3px 4px', textAlign: 'left', fontSize: '13px' }}>{toTitleCase(entry.location) || '-'}</td>
-                                  <td style={{ border: '1px solid #000', padding: '3px 4px', textAlign: 'left', fontSize: '13px' }}>{toTitleCase(entry.variety)}</td>
-                                  <td style={{ border: '1px solid #000', padding: '3px 4px', textAlign: 'center', fontSize: '12px', fontWeight: '600' }}>
-                                    {renderSampleReportByWithDate(entry)}
-                                  </td>
-                                  <td style={{ border: '1px solid #000', padding: '3px 4px', textAlign: 'center', fontSize: '12px', fontWeight: '600', color: '#6a1b9a' }}>
-                                    {renderCookingDoneByWithDate(entry, '')}
-                                  </td>
-
-                                  <td style={{ border: '1px solid #000', padding: '3px 4px', textAlign: 'center', fontSize: '12px', fontWeight: '600', color: '#1565c0' }}>
-                                    {renderApprovedByWithDate(entry)}
-                                  </td>
-                                  <td style={{ border: '1px solid #000', padding: '3px 4px', textAlign: 'center', fontSize: '12px' }}>
-                                    {getStatusBadge(entry)}
-                                  </td>
-                                  {canTakeAction && (
-                                    <td style={{ border: '1px solid #000', padding: '4px 6px', textAlign: 'center' }}>
-                                      {(() => {
-                                        const cr = entry.cookingReport;
-                                        const h = cr?.history || [];
-                                        const lastH = h.length > 0 ? h[h.length - 1] : null;
-                                        const waitingAdmin = lastH && !lastH.status && lastH.cookingDoneBy;
-                                        const waitingStaff = !cr || (cr.status === 'RECHECK' && !waitingAdmin) || (!cr.cookingDoneBy && !waitingAdmin);
-
-                                        if (user?.role !== 'staff' || waitingStaff) {
-                                          return (
-                                            <button
-                                              onClick={() => handleOpenModal(entry)}
-                                              style={{
-                                                fontSize: '9px', padding: '4px 10px',
-                                                backgroundColor: '#3498db', color: 'white', border: 'none',
-                                                borderRadius: '10px', cursor: 'pointer', fontWeight: '600'
-                                              }}
-                                            >
-                                              {user?.role === 'staff' ? 'Add Cooking Done By' : 'Add Report'}
-                                            </button>
-                                          );
-                                        } else {
-                                          return <span style={{ fontSize: '11px', color: '#999', fontStyle: 'italic' }}>Locked</span>;
-                                        }
-                                      })()}
-                                    </td>
-                                  )}
-                                </tr>
-                              );
-                            })}
-                          </tbody>
-                        </table>
-                      </div>
-                    );
-                  })}
-                </div>
-              );
-            })
-          )}
-        </div>
-      )}
+        )
+      }
 
       {/* Cooking Report Modal */}
-      {showModal && selectedEntry && (
-        <div style={{
-          position: 'fixed', top: 0, left: 0, right: 0, bottom: 0,
-          backgroundColor: 'rgba(0,0,0,0.6)', display: 'flex', justifyContent: 'center', alignItems: 'center',
-          zIndex: 1000, padding: '20px'
-        }}>
+      {
+        showModal && selectedEntry && (
           <div style={{
-            backgroundColor: 'white', borderRadius: '8px', width: '100%', maxWidth: '500px',
-            border: '1px solid #999', boxShadow: '0 8px 32px rgba(0,0,0,0.3)', overflow: 'hidden'
+            position: 'fixed', top: 0, left: 0, right: 0, bottom: 0,
+            backgroundColor: 'rgba(0,0,0,0.6)', display: 'flex', justifyContent: 'center', alignItems: 'center',
+            zIndex: 1000, padding: '20px'
           }}>
             <div style={{
-              background: 'linear-gradient(135deg, #667eea 0%, #764ba2 100%)',
-              padding: '16px 20px', color: 'white'
+              backgroundColor: 'white', borderRadius: '8px', width: '100%', maxWidth: '500px',
+              border: '1px solid #999', boxShadow: '0 8px 32px rgba(0,0,0,0.3)', overflow: 'hidden'
             }}>
-              <h3 style={{ margin: '0 0 8px 0', fontSize: '18px', fontWeight: '800', display: 'flex', alignItems: 'center', gap: '8px' }}>
-                {user?.role === 'staff' ? '🍳 Add Preparing for Cooking' : `🍳 Add ${selectedEntry.entryType === 'RICE_SAMPLE' ? 'Rice' : 'Paddy'} Cooking Report`}
-              </h3>
-              <p style={{ margin: 0, fontSize: '14px', lineHeight: '1.4', opacity: 0.95, fontWeight: '500' }}>
-                <span style={{ fontWeight: '800' }}>Broker Name:</span> {selectedEntry.brokerName}<br />
-                <span style={{ fontWeight: '800' }}>Party Name:</span> {toTitleCase(selectedEntry.partyName)}<br />
-                <span style={{ fontWeight: '800' }}>Variety:</span> {selectedEntry.variety}<br />
-                <span style={{ fontWeight: '800' }}>Bags:</span> {selectedEntry.bags?.toLocaleString('en-IN')}
-              </p>
-            </div>
+              <div style={{
+                background: 'linear-gradient(135deg, #667eea 0%, #764ba2 100%)',
+                padding: '16px 20px', color: 'white'
+              }}>
+                <h3 style={{ margin: '0 0 8px 0', fontSize: '18px', fontWeight: '800', display: 'flex', alignItems: 'center', gap: '8px' }}>
+                  {user?.role === 'staff' ? '🍳 Add Preparing for Cooking' : `🍳 Add ${selectedEntry.entryType === 'RICE_SAMPLE' ? 'Rice' : 'Paddy'} Cooking Report`}
+                </h3>
+                <p style={{ margin: 0, fontSize: '14px', lineHeight: '1.4', opacity: 0.95, fontWeight: '500' }}>
+                  <span style={{ fontWeight: '800' }}>Broker Name:</span> {selectedEntry.brokerName}<br />
+                  <span style={{ fontWeight: '800' }}>Party Name:</span> {toTitleCase(selectedEntry.partyName)}<br />
+                  <span style={{ fontWeight: '800' }}>Variety:</span> {selectedEntry.variety}<br />
+                  <span style={{ fontWeight: '800' }}>Bags:</span> {selectedEntry.bags?.toLocaleString('en-IN')}
+                </p>
+              </div>
 
-            <div style={{ padding: '20px' }}>
+              <div style={{ padding: '20px' }}>
 
-              {(user?.role !== 'staff' && !selectedEntry.cookingReport?.cookingDoneBy) ? (
-                <div style={{ padding: '20px', textAlign: 'center', backgroundColor: '#fff3cd', border: '1px solid #ffeeba', borderRadius: '4px', color: '#856404' }}>
-                  <p style={{ margin: 0, fontSize: '14px', fontWeight: '600' }}>⚠️ Action Required by Paddy Supervisor</p>
-                  <p style={{ margin: '8px 0 0', fontSize: '13px' }}>The Paddy Supervisor must select "Cooking Done By" and save their details before an Admin or Manager can approve and set the Status.</p>
-                  <div style={{ marginTop: '16px' }}>
-                    <button type="button" onClick={() => setShowModal(false)}
-                      style={{ padding: '8px 16px', cursor: 'pointer', border: '1px solid #999', borderRadius: '3px', backgroundColor: 'white', fontSize: '13px', color: '#666' }}>
-                      Close
-                    </button>
-                  </div>
-                </div>
-              ) : (
-                <form onSubmit={handleSubmit}>
-                  {/* Status & Date - Hidden for staff */}
-                  {user?.role !== 'staff' && (
-                    <>
-                      <div style={{ marginBottom: '12px' }}>
-                        <label style={{ fontWeight: '600', color: '#555', fontSize: '13px', display: 'block', marginBottom: '4px' }}>
-                          Date
-                        </label>
-                        <input
-                          type="date"
-                          value={manualDate}
-                          onChange={(e) => setManualDate(e.target.value)}
-                          style={{ width: '100%', padding: '6px 8px', border: '1px solid #999', borderRadius: '3px', fontSize: '13px' }}
-                          max={new Date().toISOString().split('T')[0]}
-                        />
-                      </div>
-                      <div style={{ marginBottom: '12px' }}>
-                        <label style={{ fontWeight: '600', color: '#555', fontSize: '13px', display: 'block', marginBottom: '4px' }}>
-                          Status *
-                        </label>
-                        <select
-                          value={cookingData.status}
-                          onChange={(e) => setCookingData({ ...cookingData, status: e.target.value })}
-                          style={{ width: '100%', padding: '6px 8px', border: '1px solid #999', borderRadius: '3px', fontSize: '13px' }}
-                          required
-                        >
-                          <option value="">-- Select Status --</option>
-                          <option value="PASS">Pass</option>
-                          <option value="FAIL">Fail</option>
-                          <option value="RECHECK">Recheck</option>
-                          <option value="MEDIUM">Medium</option>
-                        </select>
-                      </div>
-                    </>
-                  )}
-
-                  {/* Cooking Done By - STRICTLY FOR STAFF */}
-                  {user?.role === 'staff' && (
-                    <div style={{ marginBottom: '12px' }}>
-                      <label style={{ display: 'block', marginBottom: '4px', fontWeight: '500', color: '#555', fontSize: '13px' }}>
-                        Cooking Done by*
-                      </label>
-                      {!useManualEntry && (
-                        <select
-                          value={cookingData.cookingDoneBy}
-                          onChange={(e) => {
-                            setCookingData({ ...cookingData, cookingDoneBy: e.target.value });
-                          }}
-                          style={{
-                            width: '100%', padding: '6px 8px', border: '1px solid #999', borderRadius: '3px', fontSize: '13px',
-                            backgroundColor: 'white', marginBottom: '6px'
-                          }}
-                        >
-                          <option value="">-- Select from list --</option>
-                          {supervisors.map(s => (
-                            <option key={s.id} value={s.username}>{toTitleCase(s.username)}</option>
-                          ))}
-                        </select>
-                      )}
-
-                      {(!cookingData.cookingDoneBy) && (
-                        <input
-                          type="text"
-                          placeholder="Or Type Name Manually"
-                          value={manualCookingName}
-                          onChange={(e) => {
-                            const val = e.target.value;
-                            setManualCookingName(val);
-                            setUseManualEntry(val.trim() !== '');
-                          }}
-                          style={{
-                            width: '100%', padding: '6px 8px', border: '1px solid #999', borderRadius: '3px', fontSize: '13px',
-                            backgroundColor: 'white'
-                          }}
-                        />
-                      )}
+                {(user?.role !== 'staff' && !selectedEntry.cookingReport?.cookingDoneBy) ? (
+                  <div style={{ padding: '20px', textAlign: 'center', backgroundColor: '#fff3cd', border: '1px solid #ffeeba', borderRadius: '4px', color: '#856404' }}>
+                    <p style={{ margin: 0, fontSize: '14px', fontWeight: '600' }}>⚠️ Action Required by Paddy Supervisor</p>
+                    <p style={{ margin: '8px 0 0', fontSize: '13px' }}>The Paddy Supervisor must select "Cooking Done By" and save their details before an Admin or Manager can approve and set the Status.</p>
+                    <div style={{ marginTop: '16px' }}>
+                      <button type="button" onClick={() => setShowModal(false)}
+                        style={{ padding: '8px 16px', cursor: 'pointer', border: '1px solid #999', borderRadius: '3px', backgroundColor: 'white', fontSize: '13px', color: '#666' }}>
+                        Close
+                      </button>
                     </div>
-                  )}
+                  </div>
+                ) : (
+                  <form onSubmit={handleSubmit}>
+                    {/* Status & Date - Hidden for staff */}
+                    {user?.role !== 'staff' && (
+                      <>
+                        <div style={{ marginBottom: '12px' }}>
+                          <label style={{ fontWeight: '600', color: '#555', fontSize: '13px', display: 'block', marginBottom: '4px' }}>
+                            Date
+                          </label>
+                          <input
+                            type="date"
+                            value={manualDate}
+                            onChange={(e) => setManualDate(e.target.value)}
+                            style={{ width: '100%', padding: '6px 8px', border: '1px solid #999', borderRadius: '3px', fontSize: '13px' }}
+                            max={new Date().toISOString().split('T')[0]}
+                          />
+                        </div>
+                        <div style={{ marginBottom: '12px' }}>
+                          <label style={{ fontWeight: '600', color: '#555', fontSize: '13px', display: 'block', marginBottom: '4px' }}>
+                            Status *
+                          </label>
+                          <select
+                            value={cookingData.status}
+                            onChange={(e) => setCookingData({ ...cookingData, status: e.target.value })}
+                            style={{ width: '100%', padding: '6px 8px', border: '1px solid #999', borderRadius: '3px', fontSize: '13px' }}
+                            required
+                          >
+                            <option value="">-- Select Status --</option>
+                            <option value="PASS">Pass</option>
+                            <option value="FAIL">Fail</option>
+                            <option value="RECHECK">Recheck</option>
+                            <option value="MEDIUM">Medium</option>
+                          </select>
+                        </div>
+                      </>
+                    )}
 
-                  {/* Admin and Manager Block - Cooking Approved By & Remarks */}
-                  {user?.role !== 'staff' && (
-                    <>
-                      <div style={{ marginBottom: '16px' }}>
-                        <label style={{ display: 'block', marginBottom: '8px', fontWeight: '500', color: '#555', fontSize: '13px' }}>
-                          Cooking Approved by*
+                    {/* Cooking Done By - STRICTLY FOR STAFF */}
+                    {user?.role === 'staff' && (
+                      <div style={{ marginBottom: '12px' }}>
+                        <label style={{ display: 'block', marginBottom: '4px', fontWeight: '500', color: '#555', fontSize: '13px' }}>
+                          Cooking Done by*
                         </label>
-                        <div style={{ display: 'flex', flexDirection: 'row', gap: '16px', marginBottom: '8px', fontSize: '13px' }}>
-                          <label style={{ display: 'flex', alignItems: 'center', gap: '4px', cursor: 'pointer' }}>
-                            <input
-                              type="radio"
-                              name="approvalType"
-                              checked={approvalType === 'owner'}
-                              onChange={() => setApprovalType('owner')}
-                            />
-                            Harish
-                          </label>
-                          <label style={{ display: 'flex', alignItems: 'center', gap: '4px', cursor: 'pointer' }}>
-                            <input
-                              type="radio"
-                              name="approvalType"
-                              checked={approvalType === 'manager'}
-                              onChange={() => setApprovalType('manager')}
-                            />
-                            Guru
-                          </label>
-                          <label style={{ display: 'flex', alignItems: 'center', gap: '4px', cursor: 'pointer' }}>
-                            <input
-                              type="radio"
-                              name="approvalType"
-                              checked={approvalType === 'admin'}
-                              onChange={() => setApprovalType('admin')}
-                            />
-                            MK Subbu
-                          </label>
-                        </div>
-                      </div>
+                        {!useManualEntry && (
+                          <select
+                            value={cookingData.cookingDoneBy}
+                            onChange={(e) => {
+                              setCookingData({ ...cookingData, cookingDoneBy: e.target.value });
+                            }}
+                            style={{
+                              width: '100%', padding: '6px 8px', border: '1px solid #999', borderRadius: '3px', fontSize: '13px',
+                              backgroundColor: 'white', marginBottom: '6px'
+                            }}
+                          >
+                            <option value="">-- Select from list --</option>
+                            {supervisors.map(s => (
+                              <option key={s.id} value={s.username}>{toTitleCase(s.username)}</option>
+                            ))}
+                          </select>
+                        )}
 
-                      <div style={{ marginBottom: '16px' }}>
-                        <div style={{ display: 'flex', alignItems: 'center', gap: '12px', marginBottom: '8px' }}>
-                          <span style={{ fontSize: '13px', fontWeight: '500', color: '#555' }}>Remarks</span>
-                          <label style={{ display: 'flex', alignItems: 'center', cursor: 'pointer', gap: '4px', fontSize: '13px' }}>
-                            <input
-                              type="radio"
-                              checked={!showRemarksInput}
-                              onChange={() => setShowRemarksInput(false)}
-                            /> No
-                          </label>
-                          <label style={{ display: 'flex', alignItems: 'center', cursor: 'pointer', gap: '4px', fontSize: '13px' }}>
-                            <input
-                              type="radio"
-                              checked={showRemarksInput}
-                              onChange={() => setShowRemarksInput(true)}
-                            /> Yes
-                          </label>
-                        </div>
-
-                        {showRemarksInput && (
-                          <textarea
-                            value={cookingData.remarks}
-                            onChange={(e) => setCookingData({ ...cookingData, remarks: e.target.value })}
-                            style={{ width: '100%', padding: '6px 8px', border: '1px solid #999', borderRadius: '3px', fontSize: '13px', minHeight: '60px' }}
-                            placeholder="Enter remarks..."
+                        {(!cookingData.cookingDoneBy) && (
+                          <input
+                            type="text"
+                            placeholder="Or Type Name Manually"
+                            value={manualCookingName}
+                            onChange={(e) => {
+                              const val = e.target.value;
+                              setManualCookingName(val);
+                              setUseManualEntry(val.trim() !== '');
+                            }}
+                            style={{
+                              width: '100%', padding: '6px 8px', border: '1px solid #999', borderRadius: '3px', fontSize: '13px',
+                              backgroundColor: 'white'
+                            }}
                           />
                         )}
                       </div>
-                    </>
-                  )}
+                    )}
 
-                  <div style={{ display: 'flex', justifyContent: 'flex-end', gap: '8px', borderTop: '1px solid #eee', paddingTop: '12px' }}>
-                    <button type="button" onClick={() => setShowModal(false)} disabled={isSubmitting}
-                      style={{ padding: '8px 16px', cursor: isSubmitting ? 'not-allowed' : 'pointer', border: '1px solid #999', borderRadius: '3px', backgroundColor: 'white', fontSize: '13px', color: '#666' }}>
-                      Cancel
-                    </button>
-                    <button type="submit" disabled={isSubmitting}
-                      style={{ padding: '8px 16px', cursor: isSubmitting ? 'not-allowed' : 'pointer', backgroundColor: isSubmitting ? '#95a5a6' : '#27ae60', color: 'white', border: 'none', borderRadius: '3px', fontSize: '13px', fontWeight: '600' }}>
-                      {isSubmitting ? 'Saving...' : 'Save'}
-                    </button>
-                  </div>
-                </form>
-              )}
+                    {/* Admin and Manager Block - Cooking Approved By & Remarks */}
+                    {user?.role !== 'staff' && (
+                      <>
+                        <div style={{ marginBottom: '16px' }}>
+                          <label style={{ display: 'block', marginBottom: '8px', fontWeight: '500', color: '#555', fontSize: '13px' }}>
+                            Cooking Approved by*
+                          </label>
+                          <div style={{ display: 'flex', flexDirection: 'row', gap: '16px', marginBottom: '8px', fontSize: '13px' }}>
+                            <label style={{ display: 'flex', alignItems: 'center', gap: '4px', cursor: 'pointer' }}>
+                              <input
+                                type="radio"
+                                name="approvalType"
+                                checked={approvalType === 'owner'}
+                                onChange={() => setApprovalType('owner')}
+                              />
+                              Harish
+                            </label>
+                            <label style={{ display: 'flex', alignItems: 'center', gap: '4px', cursor: 'pointer' }}>
+                              <input
+                                type="radio"
+                                name="approvalType"
+                                checked={approvalType === 'manager'}
+                                onChange={() => setApprovalType('manager')}
+                              />
+                              Guru
+                            </label>
+                            <label style={{ display: 'flex', alignItems: 'center', gap: '4px', cursor: 'pointer' }}>
+                              <input
+                                type="radio"
+                                name="approvalType"
+                                checked={approvalType === 'admin'}
+                                onChange={() => setApprovalType('admin')}
+                              />
+                              MK Subbu
+                            </label>
+                          </div>
+                        </div>
+
+                        <div style={{ marginBottom: '16px' }}>
+                          <div style={{ display: 'flex', alignItems: 'center', gap: '12px', marginBottom: '8px' }}>
+                            <span style={{ fontSize: '13px', fontWeight: '500', color: '#555' }}>Remarks</span>
+                            <label style={{ display: 'flex', alignItems: 'center', cursor: 'pointer', gap: '4px', fontSize: '13px' }}>
+                              <input
+                                type="radio"
+                                checked={!showRemarksInput}
+                                onChange={() => setShowRemarksInput(false)}
+                              /> No
+                            </label>
+                            <label style={{ display: 'flex', alignItems: 'center', cursor: 'pointer', gap: '4px', fontSize: '13px' }}>
+                              <input
+                                type="radio"
+                                checked={showRemarksInput}
+                                onChange={() => setShowRemarksInput(true)}
+                              /> Yes
+                            </label>
+                          </div>
+
+                          {showRemarksInput && (
+                            <textarea
+                              value={cookingData.remarks}
+                              onChange={(e) => setCookingData({ ...cookingData, remarks: e.target.value })}
+                              style={{ width: '100%', padding: '6px 8px', border: '1px solid #999', borderRadius: '3px', fontSize: '13px', minHeight: '60px' }}
+                              placeholder="Enter remarks..."
+                            />
+                          )}
+                        </div>
+                      </>
+                    )}
+
+                    <div style={{ display: 'flex', justifyContent: 'flex-end', gap: '8px', borderTop: '1px solid #eee', paddingTop: '12px' }}>
+                      <button type="button" onClick={() => setShowModal(false)} disabled={isSubmitting}
+                        style={{ padding: '8px 16px', cursor: isSubmitting ? 'not-allowed' : 'pointer', border: '1px solid #999', borderRadius: '3px', backgroundColor: 'white', fontSize: '13px', color: '#666' }}>
+                        Cancel
+                      </button>
+                      <button type="submit" disabled={isSubmitting}
+                        style={{ padding: '8px 16px', cursor: isSubmitting ? 'not-allowed' : 'pointer', backgroundColor: isSubmitting ? '#95a5a6' : '#27ae60', color: 'white', border: 'none', borderRadius: '3px', fontSize: '13px', fontWeight: '600' }}>
+                        {isSubmitting ? 'Saving...' : 'Save'}
+                      </button>
+                    </div>
+                  </form>
+                )}
+              </div>
             </div>
           </div>
-        </div>
-      )}
+        )
+      }
 
       {/* History Modal */}
-      {historyModal.visible && (
-        <div style={{
-          position: 'fixed', top: 0, left: 0, right: 0, bottom: 0,
-          backgroundColor: 'rgba(0,0,0,0.5)', display: 'flex', justifyContent: 'center', alignItems: 'center',
-          zIndex: 1100, padding: '20px'
-        }}>
+      {
+        historyModal.visible && (
           <div style={{
-            backgroundColor: 'white', borderRadius: '8px', width: '100%', maxWidth: '400px',
-            border: '1px solid #999', boxShadow: '0 8px 32px rgba(0,0,0,0.3)', overflow: 'hidden'
+            position: 'fixed', top: 0, left: 0, right: 0, bottom: 0,
+            backgroundColor: 'rgba(0,0,0,0.5)', display: 'flex', justifyContent: 'center', alignItems: 'center',
+            zIndex: 1100, padding: '20px'
           }}>
             <div style={{
-              background: '#f8f9fa', padding: '12px 16px', borderBottom: '1px solid #e0e0e0',
-              display: 'flex', justifyContent: 'space-between', alignItems: 'center'
+              backgroundColor: 'white', borderRadius: '8px', width: '100%', maxWidth: '400px',
+              border: '1px solid #999', boxShadow: '0 8px 32px rgba(0,0,0,0.3)', overflow: 'hidden'
             }}>
-              <h3 style={{ margin: 0, fontSize: '16px', fontWeight: '700', color: '#333' }}>
-                {historyModal.title}
-              </h3>
-              <button
-                onClick={() => setHistoryModal({ visible: false, title: '', content: null })}
-                style={{ background: 'none', border: 'none', fontSize: '18px', cursor: 'pointer', color: '#999' }}
-              >
-                ✕
-              </button>
-            </div>
-            <div style={{ padding: '16px', maxHeight: '60vh', overflowY: 'auto' }}>
-              {historyModal.content}
-            </div>
-            <div style={{ padding: '12px 16px', background: '#f8f9fa', borderTop: '1px solid #e0e0e0', textAlign: 'right' }}>
-              <button
-                onClick={() => setHistoryModal({ visible: false, title: '', content: null })}
-                style={{ padding: '6px 16px', borderRadius: '4px', border: '1px solid #ccc', background: '#fff', cursor: 'pointer', fontWeight: '600', fontSize: '13px' }}
-              >
-                Close
-              </button>
+              <div style={{
+                background: '#f8f9fa', padding: '12px 16px', borderBottom: '1px solid #e0e0e0',
+                display: 'flex', justifyContent: 'space-between', alignItems: 'center'
+              }}>
+                <h3 style={{ margin: 0, fontSize: '16px', fontWeight: '700', color: '#333' }}>
+                  {historyModal.title}
+                </h3>
+                <button
+                  onClick={() => setHistoryModal({ visible: false, title: '', content: null })}
+                  style={{ background: 'none', border: 'none', fontSize: '18px', cursor: 'pointer', color: '#999' }}
+                >
+                  ✕
+                </button>
+              </div>
+              <div style={{ padding: '16px', maxHeight: '60vh', overflowY: 'auto' }}>
+                {historyModal.content}
+              </div>
+              <div style={{ padding: '12px 16px', background: '#f8f9fa', borderTop: '1px solid #e0e0e0', textAlign: 'right' }}>
+                <button
+                  onClick={() => setHistoryModal({ visible: false, title: '', content: null })}
+                  style={{ padding: '6px 16px', borderRadius: '4px', border: '1px solid #ccc', background: '#fff', cursor: 'pointer', fontWeight: '600', fontSize: '13px' }}
+                >
+                  Close
+                </button>
+              </div>
             </div>
           </div>
-        </div>
-      )}
+        )
+      }
 
       {/* Pagination Controls */}
       <div style={{ display: 'flex', justifyContent: 'center', alignItems: 'center', gap: '12px', padding: '16px 0', marginTop: '12px' }}>
@@ -1225,7 +1340,7 @@ const CookingReport: React.FC<CookingReportProps> = ({ entryType, excludeEntryTy
           Next →
         </button>
       </div>
-    </div>
+    </div >
   );
 };
 

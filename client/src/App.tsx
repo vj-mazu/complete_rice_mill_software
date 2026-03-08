@@ -212,7 +212,7 @@ const AppContent: React.FC = () => {
                 }
               />
               <Route
-                path="/owner-sample-reports"
+                path="/paddy-sample-reports"
                 element={
                   <ProtectedRoute roles={['admin']}>
                     <Layout>
@@ -221,6 +221,7 @@ const AppContent: React.FC = () => {
                   </ProtectedRoute>
                 }
               />
+              <Route path="/owner-sample-reports" element={<Navigate to="/paddy-sample-reports" replace />} />
               <Route
                 path="/manager-sample-reports"
                 element={

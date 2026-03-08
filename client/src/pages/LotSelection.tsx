@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useMemo } from 'react';
+import React, { useState, useEffect, useMemo, useRef } from 'react';
 import axios from 'axios';
 
 import { useNotification } from '../contexts/NotificationContext';
@@ -38,12 +38,18 @@ interface SampleEntry {
     wbBk: number;
     wbT: number;
     paddyWb: number;
+    gramsReport?: string;
     uploadFileUrl?: string;
     reportedBy: string;
   };
 }
 
 const toTitleCase = (str: string) => str ? str.replace(/\b\w/g, c => c.toUpperCase()) : '';
+const formatGramsReport = (value?: string): string => {
+  if (value === '5gms') return '5 gms';
+  if (value === '10gms') return '10 gms';
+  return '--';
+};
 
 interface LotSelectionProps {
   entryType?: string;
@@ -55,6 +61,7 @@ const LotSelection: React.FC<LotSelectionProps> = ({ entryType, excludeEntryType
   const [entries, setEntries] = useState<SampleEntry[]>([]);
   const [loading, setLoading] = useState(false);
   const [isSubmitting, setIsSubmitting] = useState(false);
+  const decisionLocksRef = useRef<Set<string>>(new Set());
   const [detailEntry, setDetailEntry] = useState<SampleEntry | null>(null);
   const [remarksModalData, setRemarksModalData] = useState<{ isOpen: boolean, text: string }>({ isOpen: false, text: '' });
 
@@ -129,7 +136,10 @@ const LotSelection: React.FC<LotSelectionProps> = ({ entryType, excludeEntryType
 
   const handleDecision = async (entryId: string, decision: string) => {
     if (isSubmitting) return;
+    const lockKey = `${entryId}:${decision}`;
+    if (decisionLocksRef.current.has(lockKey)) return;
     try {
+      decisionLocksRef.current.add(lockKey);
       setIsSubmitting(true);
       const token = localStorage.getItem('token');
       await axios.post(
@@ -140,7 +150,7 @@ const LotSelection: React.FC<LotSelectionProps> = ({ entryType, excludeEntryType
 
       let message = '';
       if (decision === 'PASS_WITHOUT_COOKING') {
-        message = 'Entry passed and moved to Final Report';
+        message = 'Entry passed and moved to Final Pass Lots';
       } else if (decision === 'PASS_WITH_COOKING') {
         message = 'Entry passed and moved to Cooking Report';
       } else if (decision === 'FAIL') {
@@ -155,6 +165,7 @@ const LotSelection: React.FC<LotSelectionProps> = ({ entryType, excludeEntryType
       showNotification(error.response?.data?.error || 'Failed to process decision', 'error');
     } finally {
       setIsSubmitting(false);
+      decisionLocksRef.current.delete(lockKey);
     }
   };
 
@@ -321,11 +332,12 @@ const LotSelection: React.FC<LotSelectionProps> = ({ entryType, excludeEntryType
                               <th style={{ border: '1px solid #000', padding: '3px 4px', fontWeight: '600', fontSize: '11px', textAlign: 'center', whiteSpace: 'nowrap', width: '3%' }}>Grain</th>
                               <th style={{ border: '1px solid #000', padding: '3px 4px', fontWeight: '600', fontSize: '11px', textAlign: 'center', whiteSpace: 'nowrap', width: '3%' }}>Moist</th>
                               <th style={{ border: '1px solid #000', padding: '3px 4px', fontWeight: '600', fontSize: '11px', textAlign: 'center', whiteSpace: 'nowrap', width: '4%' }}>Rice</th>
-                              <th style={{ border: '1px solid #000', padding: '3px 4px', fontWeight: '600', fontSize: '11px', textAlign: 'center', whiteSpace: 'nowrap', width: '4%' }}>Bendu</th>
+                              <th style={{ border: '1px solid #000', padding: '3px 4px', fontWeight: '600', fontSize: '11px', textAlign: 'center', whiteSpace: 'nowrap', width: '4%' }}>Bend</th>
                               <th style={{ border: '1px solid #000', padding: '3px 4px', fontWeight: '600', fontSize: '11px', textAlign: 'center', whiteSpace: 'nowrap', width: '3.5%' }}>Mix</th>
                               <th style={{ border: '1px solid #000', padding: '3px 4px', fontWeight: '600', fontSize: '11px', textAlign: 'center', whiteSpace: 'nowrap', width: '3%' }}>Oil</th>
                               <th style={{ border: '1px solid #000', padding: '3px 4px', fontWeight: '600', fontSize: '11px', textAlign: 'center', whiteSpace: 'nowrap', width: '3%' }}>Kandu</th>
                               <th style={{ border: '1px solid #000', padding: '3px 4px', fontWeight: '600', fontSize: '11px', textAlign: 'center', whiteSpace: 'nowrap', width: '3%' }}>Broken</th>
+                              <th style={{ border: '1px solid #000', padding: '3px 4px', fontWeight: '600', fontSize: '11px', textAlign: 'center', whiteSpace: 'nowrap', width: '4%' }}>Gram Report</th>
                               <th style={{ border: '1px solid #000', padding: '3px 4px', fontWeight: '600', fontSize: '11px', textAlign: 'left', whiteSpace: 'nowrap', width: '6%' }}>Sample Report By</th>
                               <th style={{ border: '1px solid #000', padding: '3px 4px', fontWeight: '600', fontSize: '11px', textAlign: 'center', whiteSpace: 'nowrap', width: '5%' }}>Cooking Status</th>
                               <th style={{ border: '1px solid #000', padding: '3px 4px', fontWeight: '600', fontSize: '11px', textAlign: 'center', whiteSpace: 'nowrap', width: '6%' }}>Action</th>
@@ -346,6 +358,12 @@ const LotSelection: React.FC<LotSelectionProps> = ({ entryType, excludeEntryType
                               return n % 1 === 0 ? String(Math.round(n)) : String(parseFloat(n.toFixed(2)));
                             };
                             const fallback = entryType === 'RICE_SAMPLE' ? '--' : '-';
+                            const fmtRiceDecimal = (v: any) => {
+                              if (v == null || v === '') return fallback;
+                              const n = Number(v);
+                              if (isNaN(n) || n === 0) return fallback;
+                              return n.toFixed(1);
+                            };
                             const hasFullQuality = qp && ((qp.cutting1 && Number(qp.cutting1) !== 0) || (qp.bend1 && Number(qp.bend1) !== 0) || (qp.mix && Number(qp.mix) !== 0));
                             const has100Grams = qp && (qp.moisture != null || (qp as any).dryMoisture != null) && !hasFullQuality;
                             return (
@@ -461,33 +479,36 @@ const LotSelection: React.FC<LotSelectionProps> = ({ entryType, excludeEntryType
                                       ) : fallback}
                                     </td>
                                     <td style={{ border: '1px solid #000', padding: '2px 3px', textAlign: 'center', verticalAlign: 'middle', fontSize: '11px', fontWeight: '600' }}>
-                                      {qp && fmtVal(qp.cutting1) !== fallback ? fmtVal(qp.cutting1) : fallback}
+                                      {qp && fmtRiceDecimal(qp.cutting1) !== fallback ? fmtRiceDecimal(qp.cutting1) : fallback}
                                     </td>
                                     <td style={{ border: '1px solid #000', padding: '2px 3px', textAlign: 'center', verticalAlign: 'middle', fontSize: '11px', fontWeight: '600' }}>
-                                      {qp && fmtVal(qp.bend1) !== fallback ? fmtVal(qp.bend1) : fallback}
+                                      {qp && fmtRiceDecimal(qp.bend1) !== fallback ? fmtRiceDecimal(qp.bend1) : fallback}
                                     </td>
                                     <td style={{ border: '1px solid #000', padding: '2px 3px', textAlign: 'center', verticalAlign: 'middle', fontSize: '10px' }}>
-                                      {qp && fmtVal(qp.mix) !== fallback ? (
-                                        (fmtVal(qp.mixS) !== fallback || fmtVal(qp.mixL) !== fallback) ? (
+                                      {qp && fmtRiceDecimal(qp.mix) !== fallback ? (
+                                        (fmtRiceDecimal(qp.mixS) !== fallback || fmtRiceDecimal(qp.mixL) !== fallback) ? (
                                           <div style={{ display: 'inline-grid', gridTemplateColumns: '20px auto', alignItems: 'center', columnGap: '0px' }}>
-                                            <div style={{ gridColumn: '2', fontSize: '11px', fontWeight: '600', color: '#555', textAlign: 'left' }}>{fmtVal(qp.mix)}</div>
-                                            {fmtVal(qp.mixS) !== fallback && (
-                                              <><div style={{ fontSize: '11px', color: '#000', textAlign: 'right', paddingRight: '2px' }}>S-</div><div style={{ fontSize: '11px', color: '#000', textAlign: 'left' }}>{fmtVal(qp.mixS)}</div></>
+                                            <div style={{ gridColumn: '2', fontSize: '11px', fontWeight: '600', color: '#555', textAlign: 'left' }}>{fmtRiceDecimal(qp.mix)}</div>
+                                            {fmtRiceDecimal(qp.mixS) !== fallback && (
+                                              <><div style={{ fontSize: '11px', color: '#000', textAlign: 'right', paddingRight: '2px' }}>S-</div><div style={{ fontSize: '11px', color: '#000', textAlign: 'left' }}>{fmtRiceDecimal(qp.mixS)}</div></>
                                             )}
-                                            {fmtVal(qp.mixL) !== fallback && (
-                                              <><div style={{ fontSize: '11px', color: '#000', textAlign: 'right', paddingRight: '2px' }}>L-</div><div style={{ fontSize: '11px', color: '#000', textAlign: 'left' }}>{fmtVal(qp.mixL)}</div></>
+                                            {fmtRiceDecimal(qp.mixL) !== fallback && (
+                                              <><div style={{ fontSize: '11px', color: '#000', textAlign: 'right', paddingRight: '2px' }}>L-</div><div style={{ fontSize: '11px', color: '#000', textAlign: 'left' }}>{fmtRiceDecimal(qp.mixL)}</div></>
                                             )}
                                           </div>
-                                        ) : <span style={{ fontWeight: '600', color: '#555' }}>{fmtVal(qp.mix)}</span>
+                                        ) : <span style={{ fontWeight: '600', color: '#555' }}>{fmtRiceDecimal(qp.mix)}</span>
                                       ) : fallback}
                                     </td>
                                     <td style={{ border: '1px solid #000', padding: '2px 3px', textAlign: 'center', verticalAlign: 'middle', fontSize: '11px', fontWeight: '600' }}>
-                                      {qp && fmtVal(qp.oil) !== fallback ? fmtVal(qp.oil) : fallback}
+                                      {qp && fmtRiceDecimal(qp.oil) !== fallback ? fmtRiceDecimal(qp.oil) : fallback}
                                     </td>
                                     <td style={{ border: '1px solid #000', padding: '2px 3px', textAlign: 'center', verticalAlign: 'middle', fontSize: '11px', fontWeight: '600' }}>
-                                      {qp && fmtVal(qp.kandu) !== fallback ? fmtVal(qp.kandu) : fallback}
+                                      {qp && fmtRiceDecimal(qp.kandu) !== fallback ? fmtRiceDecimal(qp.kandu) : fallback}
                                     </td>
-                                    <td style={{ border: '1px solid #000', padding: '2px 3px', textAlign: 'center', verticalAlign: 'middle', fontSize: '12px', fontWeight: '600' }}>{qp && fmtVal(qp.sk) !== fallback ? fmtVal(qp.sk) : fallback}</td>
+                                    <td style={{ border: '1px solid #000', padding: '2px 3px', textAlign: 'center', verticalAlign: 'middle', fontSize: '12px', fontWeight: '600' }}>{qp && fmtRiceDecimal(qp.sk) !== fallback ? fmtRiceDecimal(qp.sk) : fallback}</td>
+                                    <td style={{ border: '1px solid #000', padding: '2px 3px', textAlign: 'center', verticalAlign: 'middle', fontSize: '11px', fontWeight: '600' }}>
+                                      {formatGramsReport(qp?.gramsReport)}
+                                    </td>
                                     <td style={{ border: '1px solid #000', padding: '2px 3px', textAlign: 'left', verticalAlign: 'middle', fontSize: '11px', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
                                       {qp?.reportedBy ? toTitleCase(qp.reportedBy) : fallback}
                                     </td>
@@ -509,7 +530,7 @@ const LotSelection: React.FC<LotSelectionProps> = ({ entryType, excludeEntryType
                                           'PASS': { color: '#27ae60', label: 'Passed', icon: '✅' },
                                           'FAIL': { color: '#c0392b', label: 'Failed', icon: '❌' },
                                           'RECHECK': { color: '#e67e22', label: 'Recheck', icon: '📝' },
-                                          'MEDIUM': { color: '#2980b9', label: 'Medium', icon: '➖' },
+                                          'MEDIUM': { color: '#27ae60', label: 'Passed', icon: '✅' },
                                         };
                                         const config = (badgeConfig as any)[status] || { color: '#7f8c8d', label: cookingStatusData.status || status, icon: '❔' };
 

@@ -192,12 +192,12 @@ class SampleEntryRepository {
       // Only show entries currently pending cooking reports (or in RECHECK which stays in COOKING_REPORT status)
       where.workflowStatus = 'COOKING_REPORT';
     } else if (filters.status) {
-      // Special case: For Rice Samples, they skip QUALITY_CHECK and go straight to COOKING_REPORT or LOT_SELECTION based on the old flow.
-      // If we are looking for 'QUALITY_CHECK' (which is the status for LotSelection.tsx), and we are looking for RICE_SAMPLE, 
-      // we need to show them even if they are in COOKING_REPORT.
+      // Special case for Rice Sample pending selection tab:
+      // include QUALITY_CHECK + COOKING_REPORT + LOT_SELECTION so entries remain visible
+      // after cooking PASS/MEDIUM transitions to LOT_SELECTION.
       if (filters.status === 'QUALITY_CHECK' && filters.entryType === 'RICE_SAMPLE') {
         where.workflowStatus = {
-          [Op.in]: ['QUALITY_CHECK', 'COOKING_REPORT']
+          [Op.in]: ['QUALITY_CHECK', 'COOKING_REPORT', 'LOT_SELECTION']
         };
       } else {
         where.workflowStatus = filters.status;
@@ -229,7 +229,7 @@ class SampleEntryRepository {
     // Determine the actual statuses to query for include building
     const statusesToInclude = filters.status === 'COOKING_BOOK'
       ? ['COOKING_REPORT']
-      : (filters.status === 'QUALITY_CHECK' && filters.entryType === 'RICE_SAMPLE' ? ['QUALITY_CHECK', 'COOKING_REPORT'] : (activeStatus ? [activeStatus] : []));
+      : (filters.status === 'QUALITY_CHECK' && filters.entryType === 'RICE_SAMPLE' ? ['QUALITY_CHECK', 'COOKING_REPORT', 'LOT_SELECTION'] : (activeStatus ? [activeStatus] : []));
 
     const include = this._buildIncludesForRole(role, statusesToInclude.length > 0 ? statusesToInclude[0] : null);
 

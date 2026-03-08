@@ -40,21 +40,24 @@ const Logo = styled(Link)`
 
 const HamburgerButton = styled.button`
   display: none;
-  background: none;
-  border: none;
+  background: transparent;
+  border: 1px solid rgba(255,255,255,0.3);
   color: white;
   font-size: 1.5rem;
   cursor: pointer;
-  padding: 0.25rem 0.5rem;
-  border-radius: 4px;
+  padding: 0.3rem 0.6rem;
+  border-radius: 6px;
   line-height: 1;
+  z-index: 1002;
 
   &:hover {
     background: rgba(255, 255, 255, 0.15);
   }
 
-  @media (max-width: 768px) {
-    display: block;
+  @media (max-width: 1024px) {
+    display: flex;
+    align-items: center;
+    justify-content: center;
   }
 `;
 
@@ -79,22 +82,23 @@ const NavLinks = styled.div<{ $mobileOpen?: boolean }>`
   flex: 1;
   justify-content: flex-end;
 
-  @media (max-width: 768px) {
+  @media (max-width: 1024px) {
     position: fixed;
     top: 0;
-    right: ${props => props.$mobileOpen ? '0' : '-280px'};
+    right: ${props => props.$mobileOpen ? '0' : '-300px'};
     width: 280px;
     height: 100vh;
+    background: #059669; /* Solid fallback for older mobile browsers */
     background: linear-gradient(180deg, #10b981, #047857);
     flex-direction: column;
     align-items: stretch;
     justify-content: flex-start;
-    padding: 3.5rem 1rem 1rem;
-    gap: 0.15rem;
+    padding: 4rem 1rem 2rem;
+    gap: 0.5rem;
     z-index: 1001;
     overflow-y: auto;
-    transition: right 0.3s ease;
-    box-shadow: ${props => props.$mobileOpen ? '-4px 0 20px rgba(0,0,0,0.3)' : 'none'};
+    transition: right 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+    box-shadow: ${props => props.$mobileOpen ? '-4px 0 20px rgba(0,0,0,0.4)' : 'none'};
   }
 `;
 
@@ -111,6 +115,14 @@ const NavLink = styled(Link) <{ $active: boolean }>`
 
   &:hover {
     background: rgba(255, 255, 255, 0.15);
+  }
+
+  @media (max-width: 1024px) {
+    padding: 0.8rem 1rem;
+    font-size: 1rem;
+    border-bottom: 1px solid rgba(255,255,255,0.1);
+    border-radius: 4px;
+    white-space: normal;
   }
 `;
 
@@ -138,6 +150,16 @@ const DropdownTrigger = styled.button<{ $active: boolean }>`
   &:hover {
     background: rgba(255, 255, 255, 0.15);
   }
+
+  @media (max-width: 1024px) {
+    width: 100%;
+    justify-content: space-between;
+    padding: 0.8rem 1rem;
+    font-size: 1rem;
+    border-bottom: 1px solid rgba(255,255,255,0.1);
+    border-radius: 4px;
+    background: rgba(0,0,0,0.1);
+  }
 `;
 
 const DropdownMenu = styled.div`
@@ -162,6 +184,18 @@ const DropdownMenu = styled.div`
     border-left: 8px solid transparent;
     border-right: 8px solid transparent;
     border-bottom: 8px solid white;
+  }
+
+  @media (max-width: 1024px) {
+    position: static;
+    box-shadow: none;
+    background: rgba(0,0,0,0.15);
+    border: none;
+    border-radius: 4px;
+    margin-bottom: 0.5rem;
+    &::before {
+      display: none;
+    }
   }
 `;
 
@@ -209,6 +243,16 @@ const UserInfo = styled.div`
   padding-left: 0.75rem;
   border-left: 1px solid rgba(255, 255, 255, 0.2);
   white-space: nowrap;
+
+  @media (max-width: 1024px) {
+    margin: 1rem 0;
+    padding: 1rem 0;
+    border-left: none;
+    border-top: 1px solid rgba(255, 255, 255, 0.2);
+    justify-content: center;
+    font-size: 1rem;
+    flex-wrap: wrap;
+  }
 `;
 
 const UserBadge = styled.span`
@@ -224,17 +268,25 @@ const LogoutButton = styled.button`
   background: #ef4444;
   color: white;
   border: none;
-  padding: 0.3rem 0.7rem;
+  padding: 0.4rem 0.8rem;
   border-radius: 4px;
   cursor: pointer;
   font-weight: 600;
-  font-size: 0.8rem;
+  font-size: 0.85rem;
   transition: all 0.2s;
   margin-left: 0.5rem;
 
   &:hover {
     background: #dc2626;
     transform: translateY(-1px);
+  }
+
+  @media (max-width: 1024px) {
+    margin: 0;
+    width: 100%;
+    padding: 0.8rem;
+    font-size: 1rem;
+    border-radius: 6px;
   }
 `;
 
@@ -302,9 +354,9 @@ const Navbar: React.FC = () => {
   const isActive = (path: string) => location.pathname === path;
 
   const workflowPaths = [
-    '/sample-entry', '/sample-entry-ledger', '/sample-workflow',
+    '/sample-entry', '/rice-sample-entries', '/sample-entry-ledger', '/sample-workflow',
     '/inventory-entry', '/owner-financial', '/manager-financial',
-    '/final-review', '/owner-sample-reports', '/allotting-supervisors',
+    '/final-review', '/paddy-sample-reports', '/owner-sample-reports', '/allotting-supervisors',
     '/physical-inspection', '/pending-approvals', '/loading-lots', '/cooking-book'
   ];
   const ledgersPaths = ['/ledger', '/rice-ledger', '/sample-entry-ledger', '/hamali-book', '/egb-ledger'];
@@ -331,6 +383,7 @@ const Navbar: React.FC = () => {
           )}
           {user && user.role === 'manager' && (
             <>
+              <NavLink to="/rice-sample-entries" $active={isActive('/rice-sample-entries')}>Rice Sample Entry</NavLink>
               <NavLink to="/manager-sample-reports" $active={isActive('/manager-sample-reports')}>Paddy Sample Reports</NavLink>
               <NavLink to="/rice-sample-reports" $active={isActive('/rice-sample-reports')}>Rice Sample Reports</NavLink>
               <NavLink to="/sample-entry-ledger" $active={isActive('/sample-entry-ledger')}>Paddy Sample Book</NavLink>
@@ -338,7 +391,8 @@ const Navbar: React.FC = () => {
           )}
           {user && user.role === 'admin' && (
             <>
-              <NavLink to="/owner-sample-reports" $active={isActive('/owner-sample-reports')}>Paddy Sample Reports</NavLink>
+              <NavLink to="/rice-sample-entries" $active={isActive('/rice-sample-entries')}>Rice Sample Entry</NavLink>
+              <NavLink to="/paddy-sample-reports" $active={isActive('/paddy-sample-reports') || isActive('/owner-sample-reports')}>Paddy Sample Reports</NavLink>
               <NavLink to="/rice-sample-reports" $active={isActive('/rice-sample-reports')}>Rice Sample Reports</NavLink>
               <NavLink to="/arrivals" $active={isActive('/arrivals')}>Arrivals</NavLink>
               <NavLink to="/records" $active={isActive('/records')}>Records</NavLink>
@@ -359,7 +413,7 @@ const Navbar: React.FC = () => {
                 <DropdownMenu>
                   <DropdownLink to="/sample-entry-ledger" $active={isActive('/sample-entry-ledger')}>Paddy Sample Book</DropdownLink>
                   {user?.role === 'admin' && (
-                    <DropdownLink to="/owner-sample-reports" $active={isActive('/owner-sample-reports')}>Paddy Sample Reports</DropdownLink>
+                    <DropdownLink to="/paddy-sample-reports" $active={isActive('/paddy-sample-reports') || isActive('/owner-sample-reports')}>Paddy Sample Reports</DropdownLink>
                   )}
                   <DropdownLink to="/ledger" $active={isActive('/ledger')}>Kunchinittu Ledger</DropdownLink>
                   <DropdownLink to="/rice-ledger" $active={isActive('/rice-ledger')}>Rice Ledger</DropdownLink>
@@ -398,6 +452,9 @@ const Navbar: React.FC = () => {
                 <DropdownMenu>
                   <DropdownLink to="/sample-entry" $active={isActive('/sample-entry')}>New Paddy Sample</DropdownLink>
                   {(user.role === 'manager' || user.role === 'admin') && (
+                    <DropdownLink to="/rice-sample-entries" $active={isActive('/rice-sample-entries')}>Rice Sample Entry</DropdownLink>
+                  )}
+                  {(user.role === 'manager' || user.role === 'admin') && (
                     <>
                       <DropdownLink to="/sample-workflow" $active={isActive('/sample-workflow')}>Workflow Board</DropdownLink>
                       <DropdownLink to="/pending-approvals" $active={isActive('/pending-approvals')}>
@@ -428,7 +485,7 @@ const Navbar: React.FC = () => {
                   {user.role === 'admin' && (
                     <>
                       <DropdownDivider />
-                      <DropdownLink to="/owner-sample-reports" $active={isActive('/owner-sample-reports')}>Paddy Sample Reports</DropdownLink>
+                      <DropdownLink to="/paddy-sample-reports" $active={isActive('/paddy-sample-reports') || isActive('/owner-sample-reports')}>Paddy Sample Reports</DropdownLink>
                     </>
                   )}
                 </DropdownMenu>
